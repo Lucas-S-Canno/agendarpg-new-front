@@ -9,6 +9,7 @@ import { EventModel } from '../../models/event';
 import { StateService } from '../../services/state/state.service';
 import { EventUpdateService } from '../../services/event/event-update.service';
 import { UserService } from '../../services/user/user.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-event-modal',
@@ -18,7 +19,8 @@ import { UserService } from '../../services/user/user.service';
     MatDialogModule,
     MatButtonModule,
     MatChipsModule,
-    MatIconModule
+    MatIconModule,
+    MatSnackBarModule
   ],
   templateUrl: './event-modal.component.html',
   styleUrls: ['./event-modal.component.scss']
@@ -32,7 +34,8 @@ export class EventModalComponent implements OnInit {
     private stateService: StateService,
     private eventService: EventService,
     private eventUpdateService: EventUpdateService,
-    private userService: UserService
+    private userService: UserService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -112,7 +115,14 @@ export class EventModalComponent implements OnInit {
       }
       this.eventService.registerInEvent(eventId).subscribe({
         next: (response) => {
-          // console.log('Usuário cadastrado com sucesso:', response);
+          this.snackBar.open(
+            'Cadastro realizado com sucesso!',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-success']
+            }
+          );
         },
         complete: () => {
           this.eventUpdateService.notifyEventUpdated(this.event.id?.toString());
@@ -120,6 +130,14 @@ export class EventModalComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erro ao cadastrar usuário no evento:', error);
+          this.snackBar.open(
+            'Erro ao cadastrar usuário no evento.',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-error']
+            }
+          );
         }
       });
     }
@@ -134,7 +152,14 @@ export class EventModalComponent implements OnInit {
       }
       this.eventService.unregisterFromEvent(eventId).subscribe({
         next: (response) => {
-          // console.log('Usuário removido com sucesso:', response);
+          this.snackBar.open(
+            'Saiu do evento com sucesso!',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-success']
+            }
+          );
         },
         complete: () => {
           this.eventUpdateService.notifyEventUpdated(this.event.id?.toString());
@@ -142,6 +167,14 @@ export class EventModalComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erro ao remover usuário do evento:', error);
+          this.snackBar.open(
+            'Erro ao remover usuário do evento.',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-error']
+            }
+          );
         }
       });
     }

@@ -107,8 +107,18 @@ export class LoginComponent {
             this.stateService.isLoggedIn = true;
             this.stateService.token = response.data;
 
-            this.router.navigate(['/dashboard']);
+            this.snackBar.open(
+              'Login realizado com sucesso!',
+              'Fechar',
+              {
+                duration: 3000,
+                panelClass: ['snackbar-success']
+              }
+            );
           }
+        },
+        complete: () => {
+          this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           console.error('Login failed:', error);

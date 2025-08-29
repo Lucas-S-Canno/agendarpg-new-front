@@ -12,6 +12,7 @@ import { StateService } from '../../services/state/state.service';
 import { UserService } from '../../services/user/user.service';
 import { UserModel } from '../../models/user';
 import { Router } from '@angular/router';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-user-profile',
@@ -26,7 +27,8 @@ import { Router } from '@angular/router';
     MatSelectModule,
     MatSlideToggleModule,
     ReactiveFormsModule,
-    FormsModule
+    FormsModule,
+    MatSnackBarModule
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.scss'
@@ -40,7 +42,8 @@ export class UserProfileComponent implements OnInit {
     private fb: FormBuilder,
     private stateService: StateService,
     private userService: UserService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) {
     this.initForm();
   }
@@ -166,11 +169,27 @@ export class UserProfileComponent implements OnInit {
             this.isEditing = false;
           }
           this.loading = false;
+
+          this.snackBar.open(
+            'Perfil atualizado com sucesso!',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-success']
+            }
+          );
         },
         error: (error) => {
           console.error('Erro ao atualizar perfil:', error);
           this.loading = false;
-          // Aqui você pode adicionar um toast ou alert para mostrar o erro ao usuário
+          this.snackBar.open(
+            'Erro ao atualizar perfil. Tente novamente mais tarde.',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-error']
+            }
+          );
         }
       });
     }

@@ -10,6 +10,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { Router } from '@angular/router';
 import { ForgotPasswordService } from '../../services/user/forgot-password.service';
 import { StateService } from '../../services/state/state.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-forgot-password',
@@ -22,7 +23,8 @@ import { StateService } from '../../services/state/state.service';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatStepperModule
+    MatStepperModule,
+    MatSnackBarModule
   ],
   templateUrl: './forgot-password.component.html',
   styleUrls: ['./forgot-password.component.scss']
@@ -48,7 +50,8 @@ export class ForgotPasswordComponent implements OnInit {
     private fb: FormBuilder,
     private router: Router,
     private forgotPasswordService: ForgotPasswordService,
-    private stateService: StateService
+    private stateService: StateService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -173,13 +176,27 @@ export class ForgotPasswordComponent implements OnInit {
         next: (response) => {
           this.passwordChanged = true;
           this.loading = false;
-          // Navegar para login
+          this.snackBar.open(
+            'Senha alterada com sucesso!',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-success']
+            }
+          );
           this.router.navigate(['/login']);
         },
         error: (error) => {
           console.error('Erro ao alterar senha:', error);
           this.loading = false;
-          // TODO: Mostrar mensagem de erro
+          this.snackBar.open(
+            'Erro ao trocar senha.',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-error']
+            }
+          );
         }
       });
     }
