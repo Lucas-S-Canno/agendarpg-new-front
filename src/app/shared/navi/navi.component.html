@@ -18,8 +18,11 @@
         </a>
       } @else {
         <div mat-list-item class="welcome-item">
-          <!-- <mat-icon matListItemIcon>person</mat-icon> -->
-          <span matListItemTitle>Bem-vindo, {{ userName }}</span>
+          <mat-icon matListItemIcon>person</mat-icon>
+          <div matListItemTitle class="welcome-content">
+            <span class="welcome-text">Bem-vindo,</span>
+            <span class="user-name">{{ userName }}</span>
+          </div>
         </div>
       }
 
@@ -29,8 +32,15 @@
         <span matListItemTitle>Home</span>
       </a>
 
-      <!-- Eventos em que me cadastrei -->
+
       @if (isLoggedIn) {
+        <!-- Perfil do usuário -->
+        <a mat-list-item routerLink="/perfil" (click)="onLinkClick()">
+          <mat-icon matListItemIcon>account_circle</mat-icon>
+          <span matListItemTitle>Meu Perfil</span>
+        </a>
+
+        <!-- Eventos em que me cadastrei -->
         <a mat-list-item routerLink="/eventos-registrados" (click)="onLinkClick()">
           <mat-icon matListItemIcon>event_available</mat-icon>
           <span matListItemTitle>Meus Cadastros</span>
@@ -49,6 +59,12 @@
           <span matListItemTitle>Meus Eventos</span>
         </a>
       }
+
+      <!-- Configurações de Cookies -->
+      <a mat-list-item (click)="resetCookieConsent()">
+        <mat-icon matListItemIcon>cookie</mat-icon>
+        <span matListItemTitle>Configurar Cookies</span>
+      </a>
 
       <!-- Botão Logout - só aparece se logado -->
       @if (isLoggedIn) {

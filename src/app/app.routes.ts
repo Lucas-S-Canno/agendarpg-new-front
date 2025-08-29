@@ -7,6 +7,7 @@ import { NewEventComponent } from './components/new-event/new-event.component';
 import { MyEventsComponent } from './components/my-events/my-events.component';
 import { RegisteredEventsComponent } from './components/registered-events/registered-events.component';
 import { RegisterNewUserComponent } from './components/register-new-user/register-new-user.component';
+import { UserProfileComponent } from './components/user-profile/user-profile.component';
 import { AuthGuard } from './guards/auth.guard';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 
@@ -29,6 +30,11 @@ export const routes: Routes = [
   {
     path: 'eventos-registrados',
     component: RegisteredEventsComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'perfil',
+    component: UserProfileComponent,
     canActivate: [AuthGuard]
   },
   { path: '**',       redirectTo: 'dashboard' }

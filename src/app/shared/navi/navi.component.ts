@@ -5,6 +5,7 @@ import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Observable, map, take }    from 'rxjs';
 import { Router, RouterModule }     from '@angular/router';
 import { StateService }             from '../../services/state/state.service';
+import { CookieConsentService }     from '../../services/cookie-consent/cookie-consent.service';
 
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -36,7 +37,8 @@ export class NaviComponent {
   constructor(
     private breakpointObserver: BreakpointObserver,
     private stateService: StateService,
-    private router: Router
+    private router: Router,
+    private cookieConsentService: CookieConsentService
   ) {}
 
   get isLoggedIn(): boolean {
@@ -44,7 +46,7 @@ export class NaviComponent {
   }
 
   get userName(): string {
-    return this.stateService.userData?.nomeCompleto || '';
+    return this.stateService.userData?.apelido || '';
   }
 
   get userType(): string {
@@ -66,5 +68,12 @@ export class NaviComponent {
     this.stateService.logout();
     this.onLinkClick();
     this.router.navigate(['/login']);
+  }
+
+  resetCookieConsent(): void {
+    this.cookieConsentService.resetConsent();
+    this.onLinkClick();
+    // Recarrega a página para mostrar o banner novamente
+    window.location.reload();
   }
 }

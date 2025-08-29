@@ -3,7 +3,7 @@
 }
 
 .sidenav {
-  width: 200px;
+  width: 250px;
 }
 
 .mat-toolbar.mat-primary {
@@ -20,9 +20,46 @@
   color: var(--primary-color, #673ab7);
   font-weight: 500;
   cursor: default;
+  padding: 0 16px; // Mesmo padding dos botões
+  min-height: 48px; // Mesma altura dos botões
+  display: flex;
+  align-items: center;
 
   &:hover {
     background: transparent !important;
+  }
+
+  .welcome-content {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    margin-left: 8px; // Mesmo espaçamento do ícone para o texto nos botões
+    flex: 1;
+
+    .welcome-text {
+      font-size: 14px; // Mesmo tamanho dos botões
+      color: #999;
+      font-weight: 400;
+      margin-bottom: 1px;
+      line-height: 1.1;
+    }
+
+    .user-name {
+      font-size: 14px; // Mesmo tamanho dos botões
+      color: #673ab7;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+      line-height: 1.2;
+    }
+  }
+
+  // Garante que o ícone tenha o mesmo estilo dos outros itens
+  .mat-icon {
+    color: #673ab7;
+    margin-right: 0; // Remove margin porque já temos no content
   }
 }
 
