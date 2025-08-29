@@ -11,6 +11,8 @@ import { LoginModel } from '../../models/login';
 import { StateService } from '../../services/state/state.service';
 import { HttpClientModule } from '@angular/common/http';
 import { UserService } from '../../services/user/user.service';
+import { CookieConsentService } from '../../services/cookie-consent/cookie-consent.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-login',
@@ -27,7 +29,8 @@ import { UserService } from '../../services/user/user.service';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    RouterModule
+    RouterModule,
+    MatSnackBarModule
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
@@ -43,13 +46,14 @@ export class LoginComponent {
     private loginService: LoginService,
     private stateService: StateService,
     private userService: UserService,
-    private router: Router
+    private router: Router,
+    private cookieConsentService: CookieConsentService,
+    private snackBar: MatSnackBar
   ) {}
 
   onSubmit(): void {
     if (this.loginForm.valid) {
       this.login();
-      console.log('Login:', this.loginForm.value);
     }
   }
 
@@ -67,10 +71,22 @@ export class LoginComponent {
 
   login() {
     if (this.loginForm.valid) {
+      // Verificar se os cookies estão permitidos
+      if (!this.cookieConsentService.canUseCookies()) {
+        this.snackBar.open(
+          'Para fazer login, é necessário aceitar o uso de cookies. Os cookies são essenciais para manter você logado.',
+          'Fechar',
+          {
+            duration: 5000,
+            panelClass: ['snackbar-warning']
+          }
+        );
+        return;
+      }
+
       const credentials = this.loginForm.value;
       this.loginService.login(credentials as LoginModel).subscribe({
         next: (response) => {
-          console.log('Login successful:', response);
 
           // Decodificar o token e extrair dados do usuário
           const tokenData = this.decodeJWT(response.data);
@@ -91,12 +107,19 @@ export class LoginComponent {
             this.stateService.isLoggedIn = true;
             this.stateService.token = response.data;
 
-            console.log('User data saved in cookies:', this.stateService.userData);
             this.router.navigate(['/dashboard']);
           }
         },
         error: (error) => {
           console.error('Login failed:', error);
+          this.snackBar.open(
+            'Erro ao fazer login. Verifique suas credenciais.',
+            'Fechar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-error']
+            }
+          );
         }
       });
     }

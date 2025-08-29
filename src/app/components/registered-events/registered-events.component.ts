@@ -40,7 +40,6 @@ export class RegisteredEventsComponent implements OnInit, OnDestroy {
     // Escutar por atualizações de eventos
     this.subscription.add(
       this.eventUpdateService.eventUpdated$.subscribe(() => {
-        console.log('Eventos registrados atualizados, recarregando...');
         this.getMyEvents();
       })
     );

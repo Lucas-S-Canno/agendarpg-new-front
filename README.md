@@ -8,10 +8,20 @@
 - Alterar formato da data no modal de evento esta yyyy-mm-dd, alterar para dd/mm/yyyy
 
 - Criar pagina de perfil do usuário
-  [] Criar componente
-  [] liberar editar alguns campos (validar quais poderão ser alterados)
+  [x] Criar componente
+  [x] liberar editar alguns campos (validar quais poderão ser alterados)
+  [x] Criar service e colocar endpoint para atualizar o perfil
+  [] Criar lógica para alteração de senha (necessário backend)
 
 - Criar modal para aceitação do uso de Cookies (talvez precise de algo no backend)
+  [x] Implementado sistema completo de consentimento de cookies
+  [x] Banner responsivo com opções de aceitar/rejeitar
+  [x] Integração com autenticação
+  [x] Configuração via menu do usuário
+  [x] Documentação completa em docs/COOKIE-CONSENT.md
+
+- Colocar toaster no topo da tela para mostrar sucesso ou falha no endpoint
+  [x] Implementado com Material Snackbar no sistema de login e cookies
 
 # AgendarpdNewFront
 

@@ -151,15 +151,13 @@ export class NewEventComponent implements OnInit {
         jogadores: []
       };
 
-      console.log('Dados do evento:', eventData);
 
       this.eventService.createEvent(eventData).subscribe({
         next: (response) => {
-          console.log('Evento criado com sucesso:', response);
           this.router.navigate(['/dashboard']);
         },
         complete: () => {
-          console.log('Requisição completa');
+          // console.log('Requisição completa');
         },
         error: (error) => {
           console.error('Erro ao criar evento:', error);

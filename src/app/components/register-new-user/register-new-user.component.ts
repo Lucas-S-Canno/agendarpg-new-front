@@ -96,7 +96,7 @@ export class RegisterNewUserComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       nomeCompleto: ['', [Validators.required, Validators.minLength(3)]],
-      apelido: ['', [Validators.required, Validators.minLength(2)]],
+      apelido: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(25)]],
       dataDeNascimento: ['', Validators.required],
       tipo: ['JGD', Validators.required],
       telefone: ['', [Validators.required, this.phoneValidator]],
@@ -160,11 +160,9 @@ export class RegisterNewUserComponent implements OnInit {
         telefoneResponsavel: PhoneMask.formatForBackend(formData.telefoneResponsavel || '') // Remove máscara
       };
 
-      console.log('Dados do usuário:', userData);
 
       this.userService.registerUser(userData).subscribe({
         next: (response) => {
-          console.log('Usuário criado com sucesso:', response);
           this.router.navigate(['/login']);
         },
         error: (error) => {

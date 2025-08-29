@@ -1,6 +1,7 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { UserModel } from '../../models/user';
+import { CookieConsentService } from '../cookie-consent/cookie-consent.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +12,10 @@ export class StateService {
 
   private _isLoggedIn: boolean = false;
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private cookieConsentService: CookieConsentService
+  ) {
     this.initializeFromCookies();
   }
 
@@ -20,12 +24,16 @@ export class StateService {
       return;
     }
 
+    // Só inicializa se o usuário consentiu com cookies
+    if (!this.cookieConsentService.canUseCookies()) {
+      return;
+    }
+
     const token = this.getTokenFromCookie();
     const userData = this.getUserDataFromCookie();
 
     if (token && userData) {
       this._isLoggedIn = true;
-      console.log('Usuário logado automaticamente via cookies');
     }
   }
 
@@ -41,27 +49,42 @@ export class StateService {
   }
 
   get token(): string {
+    if (!this.cookieConsentService.canUseCookies()) {
+      return '';
+    }
     return this.getTokenFromCookie() || '';
   }
 
   set token(value: string) {
+    if (!this.cookieConsentService.canUseCookies()) {
+      console.warn('Não é possível salvar token: consentimento de cookies não foi dado');
+      return;
+    }
+
     if (value) {
       // Cookie expira quando o navegador fechar (session cookie)
       this.setCookie(this.TOKEN_COOKIE, value, {
         secure: location.protocol === 'https:', // Apenas HTTPS em produção
         sameSite: 'strict' // Proteção CSRF
       });
-      console.log('Token salvo no cookie:', value);
     } else {
       this.deleteCookie(this.TOKEN_COOKIE);
     }
   }
 
   get userData(): UserModel {
+    if (!this.cookieConsentService.canUseCookies()) {
+      return {} as UserModel;
+    }
     return this.getUserDataFromCookie() || {} as UserModel;
   }
 
   set userData(value: UserModel) {
+    if (!this.cookieConsentService.canUseCookies()) {
+      console.warn('Não é possível salvar dados do usuário: consentimento de cookies não foi dado');
+      return;
+    }
+
     if (value && Object.keys(value).length > 0) {
       // Criptografar dados sensíveis antes de salvar
       const encryptedData = this.encryptUserData(value);
@@ -69,7 +92,6 @@ export class StateService {
         secure: location.protocol === 'https:',
         sameSite: 'strict'
       });
-      console.log('Dados do usuário salvos no cookie');
     } else {
       this.deleteCookie(this.USER_COOKIE);
     }
@@ -164,13 +186,26 @@ export class StateService {
   private clearCookies(): void {
     this.deleteCookie(this.TOKEN_COOKIE);
     this.deleteCookie(this.USER_COOKIE);
-    console.log('Cookies removidos');
   }
 
   logout(): void {
     this.isLoggedIn = false;
     this.token = '';
     this.userData = {} as UserModel;
-    console.log('Logout realizado - cookies limpos');
+  }
+
+  /**
+   * Verifica se o login é possível (requer consentimento de cookies)
+   */
+  canLogin(): boolean {
+    return this.cookieConsentService.canUseCookies();
+  }
+
+  /**
+   * Retorna a mensagem de aviso quando cookies não são permitidos
+   */
+  getLoginRestrictionMessage(): string {
+    return 'Para fazer login, é necessário aceitar o uso de cookies. ' +
+           'Os cookies são essenciais para manter você logado entre as sessões.';
   }
 }

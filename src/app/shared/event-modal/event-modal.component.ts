@@ -112,7 +112,7 @@ export class EventModalComponent implements OnInit {
       }
       this.eventService.registerInEvent(eventId).subscribe({
         next: (response) => {
-          console.log('Usuário cadastrado com sucesso:', response);
+          // console.log('Usuário cadastrado com sucesso:', response);
         },
         complete: () => {
           this.eventUpdateService.notifyEventUpdated(this.event.id?.toString());
@@ -134,7 +134,7 @@ export class EventModalComponent implements OnInit {
       }
       this.eventService.unregisterFromEvent(eventId).subscribe({
         next: (response) => {
-          console.log('Usuário removido com sucesso:', response);
+          // console.log('Usuário removido com sucesso:', response);
         },
         complete: () => {
           this.eventUpdateService.notifyEventUpdated(this.event.id?.toString());

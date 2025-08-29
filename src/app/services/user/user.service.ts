@@ -42,4 +42,14 @@ export class UserService {
       { headers }
     );
   }
+
+  updateUserProfile(updatedData: UserModel): Observable<ResponseModel<UserModel>> {
+    const token = this.stateService.token
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.put<ResponseModel<UserModel>>(
+      `${this.API_URL}/update-profile/${updatedData.id}`,
+      updatedData,
+      { headers }
+    );
+  }
 }

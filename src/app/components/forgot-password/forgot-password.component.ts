@@ -118,7 +118,6 @@ export class ForgotPasswordComponent implements OnInit {
 
       this.forgotPasswordService.sendRecoverCode(this.userEmail).subscribe({
         next: (response) => {
-          console.log('Código enviado:', response);
           this.emailSent = true;
           this.currentStep = 2;
           this.loading = false;
@@ -145,7 +144,6 @@ export class ForgotPasswordComponent implements OnInit {
 
       this.forgotPasswordService.validateRecoverCode(this.userEmail, code).subscribe({
         next: (response) => {
-          console.log('Código validado:', response);
           this.resetToken = response.data;
           this.codeValidated = true;
           this.currentStep = 3;
@@ -173,7 +171,6 @@ export class ForgotPasswordComponent implements OnInit {
 
       this.forgotPasswordService.changePassword(this.userEmail, this.resetToken, newPassword).subscribe({
         next: (response) => {
-          console.log('Senha alterada:', response);
           this.passwordChanged = true;
           this.loading = false;
           // Navegar para login

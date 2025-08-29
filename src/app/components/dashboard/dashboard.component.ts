@@ -45,7 +45,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   subscribeToEventUpdates(): void {
     this.eventUpdateSubscription = this.eventUpdateService.eventUpdated$.subscribe((eventId) => {
-      console.log('Event updated, refreshing dashboard...', eventId ? `Event ID: ${eventId}` : 'All events');
+      // console.log('Event updated, refreshing dashboard...', eventId ? `Event ID: ${eventId}` : 'All events');
       this.refreshEvents();
     });
   }
