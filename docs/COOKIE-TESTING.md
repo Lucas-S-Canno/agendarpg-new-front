@@ -19,7 +19,9 @@
 3. No banner, clique em **"Rejeitar"**
 4. Banner deve desaparecer
 5. Tente fazer login
-6. **Resultado esperado:** Deve aparecer mensagem de erro informando que cookies são necessários
+6. **Resultado esperado:** Login deve funcionar normalmente, mas com aviso de que dados são salvos apenas na sessão
+7. Feche e reabra o navegador
+8. **Resultado esperado:** Usuário NÃO deve estar logado (dados não persistem)
 
 ### 4. Teste de Configuração Manual
 1. Com cookies aceitos ou rejeitados

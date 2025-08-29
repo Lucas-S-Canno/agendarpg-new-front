@@ -9,6 +9,8 @@ import { CookieConsentService } from '../cookie-consent/cookie-consent.service';
 export class StateService {
   private readonly TOKEN_COOKIE = 'auth_token';
   private readonly USER_COOKIE = 'user_data';
+  private readonly TOKEN_SESSION = 'session_auth_token';
+  private readonly USER_SESSION = 'session_user_data';
 
   private _isLoggedIn: boolean = false;
 
@@ -24,13 +26,18 @@ export class StateService {
       return;
     }
 
-    // Só inicializa se o usuário consentiu com cookies
-    if (!this.cookieConsentService.canUseCookies()) {
-      return;
-    }
+    let token: string | null = null;
+    let userData: UserModel | null = null;
 
-    const token = this.getTokenFromCookie();
-    const userData = this.getUserDataFromCookie();
+    // Primeiro tenta cookies se permitido
+    if (this.cookieConsentService.canUseCookies()) {
+      token = this.getTokenFromCookie();
+      userData = this.getUserDataFromCookie();
+    } else {
+      // Fallback para sessionStorage
+      token = this.getTokenFromSession();
+      userData = this.getUserDataFromSession();
+    }
 
     if (token && userData) {
       this._isLoggedIn = true;
@@ -49,51 +56,55 @@ export class StateService {
   }
 
   get token(): string {
-    if (!this.cookieConsentService.canUseCookies()) {
-      return '';
+    if (this.cookieConsentService.canUseCookies()) {
+      return this.getTokenFromCookie() || '';
+    } else {
+      return this.getTokenFromSession() || '';
     }
-    return this.getTokenFromCookie() || '';
   }
 
   set token(value: string) {
-    if (!this.cookieConsentService.canUseCookies()) {
-      console.warn('Não é possível salvar token: consentimento de cookies não foi dado');
-      return;
-    }
-
-    if (value) {
-      // Cookie expira quando o navegador fechar (session cookie)
-      this.setCookie(this.TOKEN_COOKIE, value, {
-        secure: location.protocol === 'https:', // Apenas HTTPS em produção
-        sameSite: 'strict' // Proteção CSRF
-      });
+    if (this.cookieConsentService.canUseCookies()) {
+      // Usa cookies se permitido
+      if (value) {
+        // Cookie expira quando o navegador fechar (session cookie)
+        this.setCookie(this.TOKEN_COOKIE, value, {
+          secure: location.protocol === 'https:', // Apenas HTTPS em produção
+          sameSite: 'strict' // Proteção CSRF
+        });
+      } else {
+        this.deleteCookie(this.TOKEN_COOKIE);
+      }
     } else {
-      this.deleteCookie(this.TOKEN_COOKIE);
+      // Fallback para sessionStorage
+      this.setTokenInSession(value);
     }
   }
 
   get userData(): UserModel {
-    if (!this.cookieConsentService.canUseCookies()) {
-      return {} as UserModel;
+    if (this.cookieConsentService.canUseCookies()) {
+      return this.getUserDataFromCookie() || {} as UserModel;
+    } else {
+      return this.getUserDataFromSession() || {} as UserModel;
     }
-    return this.getUserDataFromCookie() || {} as UserModel;
   }
 
   set userData(value: UserModel) {
-    if (!this.cookieConsentService.canUseCookies()) {
-      console.warn('Não é possível salvar dados do usuário: consentimento de cookies não foi dado');
-      return;
-    }
-
-    if (value && Object.keys(value).length > 0) {
-      // Criptografar dados sensíveis antes de salvar
-      const encryptedData = this.encryptUserData(value);
-      this.setCookie(this.USER_COOKIE, encryptedData, {
-        secure: location.protocol === 'https:',
-        sameSite: 'strict'
-      });
+    if (this.cookieConsentService.canUseCookies()) {
+      // Usa cookies se permitido
+      if (value && Object.keys(value).length > 0) {
+        // Criptografar dados sensíveis antes de salvar
+        const encryptedData = this.encryptUserData(value);
+        this.setCookie(this.USER_COOKIE, encryptedData, {
+          secure: location.protocol === 'https:',
+          sameSite: 'strict'
+        });
+      } else {
+        this.deleteCookie(this.USER_COOKIE);
+      }
     } else {
-      this.deleteCookie(this.USER_COOKIE);
+      // Fallback para sessionStorage
+      this.setUserDataInSession(value);
     }
   }
 
@@ -192,20 +203,85 @@ export class StateService {
     this.isLoggedIn = false;
     this.token = '';
     this.userData = {} as UserModel;
+    // Limpa tanto cookies quanto sessionStorage por segurança
+    this.clearCookies();
+    this.clearSessionStorage();
   }
 
   /**
-   * Verifica se o login é possível (requer consentimento de cookies)
+   * Verifica se cookies estão sendo utilizados
    */
-  canLogin(): boolean {
+  isUsingCookies(): boolean {
     return this.cookieConsentService.canUseCookies();
   }
 
   /**
-   * Retorna a mensagem de aviso quando cookies não são permitidos
+   * Retorna informação sobre o método de armazenamento sendo usado
    */
-  getLoginRestrictionMessage(): string {
-    return 'Para fazer login, é necessário aceitar o uso de cookies. ' +
-           'Os cookies são essenciais para manter você logado entre as sessões.';
+  getStorageMethod(): string {
+    return this.cookieConsentService.canUseCookies() ? 'cookies' : 'sessionStorage';
+  }
+
+  // ===== MÉTODOS PARA SESSIONSTORAGE (FALLBACK) =====
+
+  private setTokenInSession(value: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    if (value) {
+      sessionStorage.setItem(this.TOKEN_SESSION, value);
+    } else {
+      sessionStorage.removeItem(this.TOKEN_SESSION);
+    }
+  }
+
+  private getTokenFromSession(): string | null {
+    if (!isPlatformBrowser(this.platformId)) {
+      return null;
+    }
+
+    return sessionStorage.getItem(this.TOKEN_SESSION);
+  }
+
+  private setUserDataInSession(userData: UserModel): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    if (userData && Object.keys(userData).length > 0) {
+      // Criptografar dados mesmo no sessionStorage por segurança
+      const encryptedData = this.encryptUserData(userData);
+      sessionStorage.setItem(this.USER_SESSION, encryptedData);
+    } else {
+      sessionStorage.removeItem(this.USER_SESSION);
+    }
+  }
+
+  private getUserDataFromSession(): UserModel | null {
+    if (!isPlatformBrowser(this.platformId)) {
+      return null;
+    }
+
+    const encryptedData = sessionStorage.getItem(this.USER_SESSION);
+    if (encryptedData) {
+      try {
+        return this.decryptUserData(encryptedData);
+      } catch (error) {
+        console.error('Erro ao descriptografar dados do usuário do sessionStorage:', error);
+        this.clearSessionStorage();
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private clearSessionStorage(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    sessionStorage.removeItem(this.TOKEN_SESSION);
+    sessionStorage.removeItem(this.USER_SESSION);
   }
 }

@@ -53,14 +53,15 @@ Serviço de estado modificado para respeitar o consentimento:
    - Escolha é salva em cookie essencial
 
 2. **Consentimento Aceito**
-   - Todos os cookies podem ser utilizados
-   - Login e funcionalidades completas disponíveis
+   - Dados são salvos em cookies
+   - Login persiste entre sessões
+   - Experiência completa disponível
    - Banner não aparece mais
 
 3. **Consentimento Rejeitado**
-   - Apenas cookies essenciais são utilizados
-   - Login é bloqueado com aviso ao usuário
-   - Funcionalidades limitadas
+   - Dados são salvos em sessionStorage
+   - Login funciona normalmente mas não persiste
+   - Usuário precisa fazer login a cada nova sessão
    - Banner não aparece mais
 
 4. **Configuração Manual**
@@ -70,20 +71,23 @@ Serviço de estado modificado para respeitar o consentimento:
 ## Integração com Autenticação
 
 ### LoginComponent
-O componente de login verifica o consentimento antes de permitir login:
+O componente de login agora permite login independente do consentimento de cookies:
 ```typescript
-if (!this.cookieConsentService.canUseCookies()) {
-  // Exibe aviso sobre necessidade de cookies
-  return;
-}
+// Login sempre funciona, mas método de armazenamento varia
+const storageMethod = this.stateService.getStorageMethod();
+const message = storageMethod === 'cookies'
+  ? 'Dados salvos em cookies'
+  : 'Dados salvos apenas nesta sessão';
 ```
 
 ### StateService
-Todas as operações de cookie verificam consentimento:
+Utiliza armazenamento híbrido baseado no consentimento:
 ```typescript
-if (!this.cookieConsentService.canUseCookies()) {
-  console.warn('Cookies não permitidos');
-  return;
+// Cookies se permitido, senão sessionStorage
+if (this.cookieConsentService.canUseCookies()) {
+  // Usar cookies
+} else {
+  // Usar sessionStorage
 }
 ```
 

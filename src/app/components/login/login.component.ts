@@ -71,27 +71,13 @@ export class LoginComponent {
 
   login() {
     if (this.loginForm.valid) {
-      // Verificar se os cookies estão permitidos
-      if (!this.cookieConsentService.canUseCookies()) {
-        this.snackBar.open(
-          'Para fazer login, é necessário aceitar o uso de cookies. Os cookies são essenciais para manter você logado.',
-          'Fechar',
-          {
-            duration: 5000,
-            panelClass: ['snackbar-warning']
-          }
-        );
-        return;
-      }
-
       const credentials = this.loginForm.value;
       this.loginService.login(credentials as LoginModel).subscribe({
         next: (response) => {
-
           // Decodificar o token e extrair dados do usuário
           const tokenData = this.decodeJWT(response.data);
           if (tokenData) {
-            // Salvar os dados do usuário no StateService (que agora salva em cookies)
+            // Salvar os dados do usuário no StateService
             this.stateService.userData = {
               id: tokenData.id,
               email: tokenData.sub, // 'sub' é o email no seu JWT
@@ -107,18 +93,23 @@ export class LoginComponent {
             this.stateService.isLoggedIn = true;
             this.stateService.token = response.data;
 
+            // Informar sobre o método de armazenamento
+            const storageMethod = this.stateService.getStorageMethod();
+            const storageMessage = storageMethod === 'cookies'
+              ? 'Login realizado com sucesso! Dados salvos em cookies.'
+              : 'Login realizado com sucesso! Dados salvos apenas nesta sessão (sem cookies).';
+
             this.snackBar.open(
-              'Login realizado com sucesso!',
+              storageMessage,
               'Fechar',
               {
-                duration: 3000,
+                duration: 4000,
                 panelClass: ['snackbar-success']
               }
             );
+
+            this.router.navigate(['/dashboard']);
           }
-        },
-        complete: () => {
-          this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           console.error('Login failed:', error);
@@ -142,5 +133,4 @@ export class LoginComponent {
   goToForgotPassword(): void {
     this.router.navigate(['/recuperar-senha']);
   }
-
 }
