@@ -217,3 +217,64 @@ button {
     transform: translateY(0);
   }
 }
+
+// Estilos para ações do card
+mat-card-actions {
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 1rem;
+
+  .change-password-btn {
+    color: #2196F3;
+    border-color: #2196F3;
+    background: rgba(33, 150, 243, 0.05);
+    font-weight: 500;
+    transition: all 0.3s ease;
+
+    &:hover:not(:disabled) {
+      background-color: rgba(33, 150, 243, 0.1);
+      border-color: #1976D2;
+      color: #1976D2;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+    }
+
+    mat-icon {
+      margin-right: 0.5rem;
+    }
+  }  .edit-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .change-password-btn,
+    .edit-actions button {
+      width: 100%;
+    }
+
+    .edit-actions {
+      width: 100%;
+      margin-left: 0;
+
+      button {
+        flex: 1;
+      }
+    }
+  }
+}
+
+// Estilos globais para o dialog
+::ng-deep .change-password-dialog {
+  .mat-mdc-dialog-container {
+    padding: 0;
+    overflow: visible;
+  }
+}

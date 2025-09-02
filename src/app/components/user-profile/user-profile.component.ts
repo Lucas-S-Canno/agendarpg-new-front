@@ -7,12 +7,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { StateService } from '../../services/state/state.service';
 import { UserService } from '../../services/user/user.service';
 import { UserModel } from '../../models/user';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ChangePasswordModalComponent } from '../../shared/change-password-modal/change-password-modal.component';
+import { PhoneMask } from '../../utils/phone-mask';
 
 @Component({
   selector: 'app-user-profile',
@@ -26,6 +29,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
     MatInputModule,
     MatSelectModule,
     MatSlideToggleModule,
+    MatDialogModule,
     ReactiveFormsModule,
     FormsModule,
     MatSnackBarModule
@@ -43,7 +47,8 @@ export class UserProfileComponent implements OnInit {
     private stateService: StateService,
     private userService: UserService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {
     this.initForm();
   }
@@ -56,19 +61,38 @@ export class UserProfileComponent implements OnInit {
     return this.profileForm.get('menor')?.value === 'S';
   }
 
+  // Validador customizado para telefone
+  phoneValidator = (control: any) => {
+    if (!control.value) return null;
+    const isValid = PhoneMask.isValid(control.value);
+    return isValid ? null : { invalidPhone: true };
+  };
+
+  // Aplica máscara no campo de telefone
+  onPhoneInput(event: any, fieldName: string): void {
+    const input = event.target;
+    const maskedValue = PhoneMask.applyMask(input.value);
+
+    // Atualiza o valor do input
+    input.value = maskedValue;
+
+    // Atualiza o FormControl
+    this.profileForm.get(fieldName)?.setValue(maskedValue, { emitEvent: false });
+  }
+
   initForm(): void {
     this.profileForm = this.fb.group({
       id: [''],
       nomeCompleto: [{ value: '', disabled: true }],
       apelido: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      telefone: [''],
+      telefone: ['', [this.phoneValidator]],
       dataDeNascimento: [{ value: '', disabled: true }],
       tipo: [{ value: '', disabled: true }],
       menor: [''],
       password: [''],
       responsavel: [''],
-      telefoneResponsavel: ['']
+      telefoneResponsavel: ['', [this.phoneValidator]]
     });
   }
 
@@ -82,13 +106,13 @@ export class UserProfileComponent implements OnInit {
             nomeCompleto: response.data.nomeCompleto,
             apelido: response.data.apelido,
             email: response.data.email,
-            telefone: response.data.telefone,
+            telefone: PhoneMask.applyMask(response.data.telefone || ''),
             dataDeNascimento: response.data.dataDeNascimento,
             tipo: response.data.tipo,
             menor: response.data.menor,
             password: response.data.password || '',
             responsavel: response.data.responsavel || '',
-            telefoneResponsavel: response.data.telefoneResponsavel || ''
+            telefoneResponsavel: PhoneMask.applyMask(response.data.telefoneResponsavel || '')
           });
         }
         this.loading = false;
@@ -103,13 +127,13 @@ export class UserProfileComponent implements OnInit {
             nomeCompleto: userData.nomeCompleto,
             apelido: userData.apelido,
             email: userData.email,
-            telefone: userData.telefone,
+            telefone: PhoneMask.applyMask(userData.telefone || ''),
             dataDeNascimento: userData.dataDeNascimento,
             tipo: userData.tipo,
             menor: userData.menor,
             password: userData.password || '',
             responsavel: userData.responsavel || '',
-            telefoneResponsavel: userData.telefoneResponsavel || ''
+            telefoneResponsavel: PhoneMask.applyMask(userData.telefoneResponsavel || '')
           });
         }
         this.loading = false;
@@ -148,10 +172,10 @@ export class UserProfileComponent implements OnInit {
         apelido: formData.apelido,
         dataDeNascimento: formData.dataDeNascimento,
         tipo: formData.tipo,
-        telefone: formData.telefone,
+        telefone: PhoneMask.formatForBackend(formData.telefone || ''),
         menor: formData.menor,
         responsavel: formData.responsavel || '',
-        telefoneResponsavel: formData.telefoneResponsavel || ''
+        telefoneResponsavel: PhoneMask.formatForBackend(formData.telefoneResponsavel || '')
       };
 
 
@@ -212,5 +236,22 @@ export class UserProfileComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/dashboard']);
+  }
+
+  openChangePasswordModal(): void {
+    const dialogRef = this.dialog.open(ChangePasswordModalComponent, {
+      width: '500px',
+      maxWidth: '90vw',
+      disableClose: false,
+      autoFocus: true,
+      panelClass: 'change-password-dialog'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        // Senha alterada com sucesso
+        console.log('Senha alterada com sucesso');
+      }
+    });
   }
 }

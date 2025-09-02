@@ -6,6 +6,7 @@ import { ResponseModel } from '../../models/response';
 import { UserModel } from '../../models/user';
 import { StateService } from '../state/state.service';
 import { NarratorNicknameModel } from '../../models/narratorNickname';
+import { ChangePasswordProfileModel } from '../../models/changePasswordProfile';
 
 @Injectable({
   providedIn: 'root'
@@ -49,6 +50,16 @@ export class UserService {
     return this.http.put<ResponseModel<UserModel>>(
       `${this.API_URL}/update-profile/${updatedData.id}`,
       updatedData,
+      { headers }
+    );
+  }
+
+  changePassword(changePassword: ChangePasswordProfileModel): Observable<ResponseModel<void>> {
+    const token = this.stateService.token
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.put<ResponseModel<void>>(
+      `${this.API_URL}/change-password`,
+      changePassword,
       { headers }
     );
   }

@@ -13,7 +13,7 @@
       </div>
 
       <div class="detail-item">
-        <strong>Data e Horário:</strong> {{ event.data }} às {{ event.horario }}
+        <strong>Data e Horário:</strong> {{ event.data | date:'dd/MM/yyyy' }} às {{ event.horario }}
       </div>
 
       <div class="detail-item">

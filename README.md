@@ -1,39 +1,18 @@
 # TO-DO
 
+- Mensagem de bem vindo no navi não esta mostrando o apelido do usuário
+
+## Tasks Feitas
+
+- Acrescentar mascara no telefone na pagina de perfil
+
 - Alterar formato da data no modal de evento esta yyyy-mm-dd, alterar para dd/mm/yyyy
 
 - Criar pagina de perfil do usuário
   
-  [] Criar lógica para alteração de senha (necessário backend)
+  [x] Criar lógica para alteração de senha (necessário backend)
 
-- Acrescentar mascara no telefone na pagina de perfil
-
-
-## Tasks Feitas
-
-- Nome do narrrador no modal de evento
-  
-  [x] endpoint dos dados basicos do narrador ( id, nome e email ), http://localhost:8080/api/user-app/user/narrator-name/{id}
-  [x] trocar dashboard para não mostrar o nome do narrador e mostrar somente após o usuário estar logado (LGPD)
-  [x] talvez adicionar o campo de apelido no cadastro de usuário
-
-- Criar pagina de perfil do usuário
-  
-  [x] Criar componente
-  [x] liberar editar alguns campos (validar quais poderão ser alterados)
-  [x] Criar service e colocar endpoint para atualizar o perfil
-
-- Criar modal para aceitação do uso de Cookies (talvez precise de algo no backend)
-  
-  [x] Implementado sistema completo de consentimento de cookies
-  [x] Banner responsivo com opções de aceitar/rejeitar
-  [x] Integração com autenticação
-  [x] Configuração via menu do usuário
-  [x] Documentação completa em docs/COOKIE-CONSENT.md
-
-- Colocar snackbar para mostrar sucesso ou falha no endpoint
-  
-  [x] Implementado com Material Snackbar no sistema de login e cookies
+- Troca de senha na página de perfil
 
 # AgendarpdNewFront
 
