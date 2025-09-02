@@ -46,7 +46,7 @@ export class NaviComponent {
   }
 
   get userName(): string {
-    return this.stateService.userData?.apelido || '';
+    return this.stateService.userData?.apelido || this.stateService.userData?.nomeCompleto || '';
   }
 
   get userType(): string {

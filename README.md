@@ -1,8 +1,8 @@
 # TO-DO
 
-- Mensagem de bem vindo no navi não esta mostrando o apelido do usuário
-
 ## Tasks Feitas
+
+- Mensagem de bem vindo no navi não esta mostrando o apelido do usuário
 
 - Acrescentar mascara no telefone na pagina de perfil
 

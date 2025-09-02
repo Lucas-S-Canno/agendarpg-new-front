@@ -74,42 +74,67 @@ export class LoginComponent {
       const credentials = this.loginForm.value;
       this.loginService.login(credentials as LoginModel).subscribe({
         next: (response) => {
-          // Decodificar o token e extrair dados do usuário
-          const tokenData = this.decodeJWT(response.data);
-          if (tokenData) {
-            // Salvar os dados do usuário no StateService
-            this.stateService.userData = {
-              id: tokenData.id,
-              email: tokenData.sub, // 'sub' é o email no seu JWT
-              nomeCompleto: tokenData.nomeCompleto,
-              apelido: tokenData.apelido || '', // adicionar apelido do token ou string vazia
-              tipo: tokenData.tipo,
-              password: '', // não salvar senha
-              dataDeNascimento: '',
-              telefone: '',
-              menor: ''
-            };
+          // Primeiro salvar o token
+          this.stateService.token = response.data;
+          this.stateService.isLoggedIn = true;
 
-            this.stateService.isLoggedIn = true;
-            this.stateService.token = response.data;
+          // Depois buscar dados completos do usuário
+          this.userService.getUserProfile().subscribe({
+            next: (userResponse) => {
+              console.log('Resposta completa do getUserProfile:', userResponse);
+              if (userResponse.data) {
+                console.log('Dados do usuário recebidos:', userResponse.data);
+                // Salvar dados completos do usuário
+                this.stateService.userData = userResponse.data;
 
-            // Informar sobre o método de armazenamento
-            const storageMethod = this.stateService.getStorageMethod();
-            const storageMessage = storageMethod === 'cookies'
-              ? 'Login realizado com sucesso! Dados salvos em cookies.'
-              : 'Login realizado com sucesso! Dados salvos apenas nesta sessão (sem cookies).';
+                // Informar sobre o método de armazenamento
+                const storageMethod = this.stateService.getStorageMethod();
+                const storageMessage = storageMethod === 'cookies'
+                  ? 'Login realizado com sucesso! Dados salvos em cookies.'
+                  : 'Login realizado com sucesso! Dados salvos apenas nesta sessão (sem cookies).';
 
-            this.snackBar.open(
-              storageMessage,
-              'Fechar',
-              {
-                duration: 4000,
-                panelClass: ['snackbar-success']
+                this.snackBar.open(
+                  storageMessage,
+                  'Fechar',
+                  {
+                    duration: 4000,
+                    panelClass: ['snackbar-success']
+                  }
+                );
+
+                this.router.navigate(['/dashboard']);
               }
-            );
+            },
+            error: (userError) => {
+              console.error('Erro ao buscar dados do usuário:', userError);
+              // Fallback: usar dados do token se busca falhar
+              const tokenData = this.decodeJWT(response.data);
+              if (tokenData) {
+                this.stateService.userData = {
+                  id: tokenData.id,
+                  email: tokenData.sub,
+                  nomeCompleto: tokenData.nomeCompleto,
+                  apelido: tokenData.apelido || tokenData.nomeCompleto || '',
+                  tipo: tokenData.tipo,
+                  password: '',
+                  dataDeNascimento: '',
+                  telefone: '',
+                  menor: ''
+                };
 
-            this.router.navigate(['/dashboard']);
-          }
+                this.snackBar.open(
+                  'Login realizado com sucesso!',
+                  'Fechar',
+                  {
+                    duration: 3000,
+                    panelClass: ['snackbar-success']
+                  }
+                );
+
+                this.router.navigate(['/dashboard']);
+              }
+            }
+          });
         },
         error: (error) => {
           console.error('Login failed:', error);
