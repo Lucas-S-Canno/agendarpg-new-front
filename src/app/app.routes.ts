@@ -10,11 +10,15 @@ import { RegisterNewUserComponent } from './components/register-new-user/registe
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
 import { AuthGuard } from './guards/auth.guard';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
+import { EmailConfirmationComponent } from './components/email-confirmation/email-confirmation.component';
+import { EmailVerificationComponent } from './components/email-verification/email-verification.component';
 
 export const routes: Routes = [
   { path: '',         redirectTo: 'dashboard',    pathMatch: 'full' },
   { path: 'login',    component: LoginComponent },
   { path: 'cadastro', component: RegisterNewUserComponent },
+  { path: 'confirmacao-email', component: EmailConfirmationComponent },
+  { path: 'verify-email', component: EmailVerificationComponent },
   { path: 'dashboard',component: DashboardComponent },
   { path: 'recuperar-senha', component: ForgotPasswordComponent },
   {

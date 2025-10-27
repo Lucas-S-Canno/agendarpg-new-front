@@ -14,6 +14,7 @@ import { ChangePasswordProfileModel } from '../../models/changePasswordProfile';
 export class UserService {
   API_URL = environment.apiUrl + `/user-app/user`;
   API_PUBLIC_URL = environment.apiUrl + `/public/user`;
+  API_EMAIL_VERIFICATION_URL = environment.apiUrl + `/public/email-validation`;
   constructor(
     private http: HttpClient,
     private stateService: StateService
@@ -61,6 +62,19 @@ export class UserService {
       `${this.API_URL}/change-password`,
       changePassword,
       { headers }
+    );
+  }
+
+  resendActivationEmail(email: string): Observable<ResponseModel<void>> {
+    return this.http.post<ResponseModel<void>>(
+      `${this.API_EMAIL_VERIFICATION_URL}/resend-verification`,
+      { email }
+    );
+  }
+
+  verifyEmail(token: string): Observable<ResponseModel<void>> {
+    return this.http.get<ResponseModel<void>>(
+      `${this.API_EMAIL_VERIFICATION_URL}/verify-email?token=${token}`
     );
   }
 }

@@ -163,7 +163,11 @@ export class RegisterNewUserComponent implements OnInit {
 
       this.userService.registerUser(userData).subscribe({
         next: (response) => {
-          this.router.navigate(['/login']);
+          this.loading = false;
+          // Redirecionar para página de confirmação de email
+          this.router.navigate(['/confirmacao-email'], {
+            state: { email: formData.email }
+          });
         },
         error: (error) => {
           console.error('Erro ao criar usuário:', error);
