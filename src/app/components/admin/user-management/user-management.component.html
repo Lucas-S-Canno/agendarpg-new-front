@@ -1,0 +1,28 @@
+<div class="user-management-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>people</mat-icon>
+        Gestão de Usuários
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+        <p>Carregando dados dos usuários...</p>
+      </div>
+
+      <div *ngIf="!loading" class="content">
+        <p>Página de gestão de usuários em desenvolvimento.</p>
+        <p>Aqui você poderá:</p>
+        <ul>
+          <li>Visualizar todos os usuários do sistema</li>
+          <li>Editar permissões de usuários</li>
+          <li>Ativar/Desativar contas</li>
+          <li>Gerenciar tipos de usuários (JGD, NRD, CRD, ADM)</li>
+        </ul>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -68,3 +68,62 @@
     margin-right: 8px;
   }
 }
+
+// Estilos para o Painel de Administração
+.admin-panel {
+  // margin: 8px 16px;
+  box-shadow: none !important;
+  background: transparent !important;
+
+  ::ng-deep {
+    .mat-expansion-panel-header {
+      padding: 0 16px;
+      min-height: 48px;
+      font-size: 14px;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.04);
+      }
+    }
+
+    .mat-expansion-panel-body {
+      padding: 0 !important;
+    }
+
+    .mat-panel-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(0, 0, 0, 0.87);
+      font-weight: 500;
+
+      mat-icon {
+        color: #673ab7;
+      }
+    }
+
+    .mat-expansion-indicator {
+      &::after {
+        color: #673ab7;
+      }
+    }
+  }
+}
+
+.admin-menu {
+  padding: 0 !important;
+
+  a {
+    padding-left: 12px !important; // Indentação para mostrar hierarquia
+    font-size: 14px;
+
+    &:hover {
+      background: rgba(103, 58, 183, 0.08);
+    }
+
+    mat-icon {
+      color: #673ab7;
+      opacity: 0.8;
+    }
+  }
+}

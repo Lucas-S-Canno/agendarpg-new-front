@@ -12,6 +12,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatIconModule }    from '@angular/material/icon';
 import { MatListModule }    from '@angular/material/list';
 import { MatButtonModule }  from '@angular/material/button';
+import { MatExpansionModule } from '@angular/material/expansion';
 
 @Component({
   selector: 'app-navi',
@@ -23,7 +24,8 @@ import { MatButtonModule }  from '@angular/material/button';
     MatSidenavModule,
     MatIconModule,
     MatListModule,
-    MatButtonModule
+    MatButtonModule,
+    MatExpansionModule
   ],
   templateUrl: './navi.component.html',
   styleUrls: ['./navi.component.scss']
@@ -56,6 +58,11 @@ export class NaviComponent {
   get canCreateEvents(): boolean {
     const allowedTypes = ['NRD', 'CRD', 'ADM'];
     return this.isLoggedIn && allowedTypes.includes(this.userType);
+  }
+
+  get isAdmin(): boolean {
+    const adminTypes = ['CRD', 'ADM'];
+    return this.isLoggedIn && adminTypes.includes(this.userType);
   }
 
   onLinkClick(): void {

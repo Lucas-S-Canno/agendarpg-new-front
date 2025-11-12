@@ -1,0 +1,29 @@
+<div class="event-management-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>event</mat-icon>
+        Gestão de Eventos
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+        <p>Carregando dados dos eventos...</p>
+      </div>
+
+      <div *ngIf="!loading" class="content">
+        <p>Página de gestão de eventos em desenvolvimento.</p>
+        <p>Aqui você poderá:</p>
+        <ul>
+          <li>Visualizar todos os eventos do sistema</li>
+          <li>Aprovar ou reprovar eventos criados por narradores</li>
+          <li>Editar informações de eventos</li>
+          <li>Cancelar eventos</li>
+          <li>Visualizar estatísticas de eventos</li>
+        </ul>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

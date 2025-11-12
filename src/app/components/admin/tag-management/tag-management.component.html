@@ -1,0 +1,29 @@
+<div class="tag-management-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>local_offer</mat-icon>
+        Cadastrar Novas Tags
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-container">
+        <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+        <p>Carregando sistema de tags...</p>
+      </div>
+
+      <div *ngIf="!loading" class="content">
+        <p>Página de gerenciamento de tags em desenvolvimento.</p>
+        <p>Aqui você poderá:</p>
+        <ul>
+          <li>Criar novas tags para categorizar eventos</li>
+          <li>Editar tags existentes</li>
+          <li>Remover tags não utilizadas</li>
+          <li>Visualizar estatísticas de uso de tags</li>
+          <li>Organizar tags por categorias</li>
+        </ul>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
