@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,13 +22,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   templateUrl: './tag-management.component.html',
   styleUrls: ['./tag-management.component.scss']
 })
-export class TagManagementComponent {
+export class TagManagementComponent implements OnInit {
   loading = true;
 
   constructor() {
-    // Mock de carregamento
-    setTimeout(() => {
-      this.loading = false;
-    }, 1500);
   }
+
+  ngOnInit(): void {
+    this.loading = false;
+  }
+
 }

@@ -15,6 +15,7 @@ export class UserService {
   API_URL = environment.apiUrl + `/user-app/user`;
   API_PUBLIC_URL = environment.apiUrl + `/public/user`;
   API_EMAIL_VERIFICATION_URL = environment.apiUrl + `/public/email-validation`;
+
   constructor(
     private http: HttpClient,
     private stateService: StateService

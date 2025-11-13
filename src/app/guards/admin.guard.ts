@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { delay, map } from 'rxjs/operators';
+import { delay, map, catchError } from 'rxjs/operators';
 import { StateService } from '../services/state/state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { UserAdminService } from '../services/admin/user-admin/user-admin.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,8 @@ export class AdminGuard implements CanActivate {
   constructor(
     private stateService: StateService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private userAdminService: UserAdminService
   ) {}
 
   canActivate(
@@ -49,27 +51,16 @@ export class AdminGuard implements CanActivate {
   }
 
   /**
-   * Mock de validação de permissão de administrador
-   * Substitua este método por uma chamada real à API:
-   *
-   * validateAdminPermission(): Observable<boolean> {
-   *   const token = this.stateService.token;
-   *   const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-   *   return this.http.get<ResponseModel<boolean>>(
-   *     `${this.API_URL}/validate-admin`,
-   *     { headers }
-   *   ).pipe(
-   *     map(response => response.data)
-   *   );
-   * }
+   * Validação de permissão de administrador via API
    */
   private validateAdminPermission(): Observable<boolean> {
-    // Mock: verifica localmente se o usuário é CRD ou ADM
-    const userType = this.stateService.userData?.tipo || '';
-    const adminTypes = ['CRD', 'ADM'];
-    const isAdmin = adminTypes.includes(userType);
-
-    // Simula delay de requisição para mostrar o efeito de loading
-    return of(isAdmin).pipe(delay(800));
+    return this.userAdminService.validateUserIsAdmin().pipe(
+      map(response => response.data || false),
+      catchError(error => {
+        console.error('Erro ao validar permissão de admin:', error);
+        // Em caso de erro, nega o acesso
+        return of(false);
+      })
+    );
   }
 }
