@@ -60,6 +60,35 @@
         </a>
       }
 
+      <!-- Painel de Administração - apenas CRD e ADM -->
+      @if (isAdmin) {
+        <mat-expansion-panel class="admin-panel">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon>admin_panel_settings</mat-icon>
+              <span>Painel de Administração</span>
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+
+          <mat-nav-list class="admin-menu">
+            <a mat-list-item routerLink="/admin/usuarios" (click)="onLinkClick()">
+              <mat-icon matListItemIcon>people</mat-icon>
+              <span matListItemTitle>Gestão de Usuários</span>
+            </a>
+
+            <a mat-list-item routerLink="/admin/eventos" (click)="onLinkClick()">
+              <mat-icon matListItemIcon>event</mat-icon>
+              <span matListItemTitle>Gestão de Eventos</span>
+            </a>
+
+            <a mat-list-item routerLink="/admin/tags" (click)="onLinkClick()">
+              <mat-icon matListItemIcon>local_offer</mat-icon>
+              <span matListItemTitle>Cadastrar Novas Tags</span>
+            </a>
+          </mat-nav-list>
+        </mat-expansion-panel>
+      }
+
       <!-- Configurações de Cookies -->
       <a mat-list-item (click)="resetCookieConsent()">
         <mat-icon matListItemIcon>cookie</mat-icon>

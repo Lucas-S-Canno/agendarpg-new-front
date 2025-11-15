@@ -12,6 +12,10 @@ import { AuthGuard } from './guards/auth.guard';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { EmailConfirmationComponent } from './components/email-confirmation/email-confirmation.component';
 import { EmailVerificationComponent } from './components/email-verification/email-verification.component';
+import { UserManagementComponent } from './components/admin/user-management/user-management.component';
+import { EventManagementComponent } from './components/admin/event-management/event-management.component';
+import { TagManagementComponent } from './components/admin/tag-management/tag-management.component';
+import { AdminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
   { path: '',         redirectTo: 'dashboard',    pathMatch: 'full' },
@@ -40,6 +44,21 @@ export const routes: Routes = [
     path: 'perfil',
     component: UserProfileComponent,
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'admin/usuarios',
+    component: UserManagementComponent,
+    canActivate: [AuthGuard, AdminGuard]
+  },
+  {
+    path: 'admin/eventos',
+    component: EventManagementComponent,
+    canActivate: [AuthGuard, AdminGuard]
+  },
+  {
+    path: 'admin/tags',
+    component: TagManagementComponent,
+    canActivate: [AuthGuard, AdminGuard]
   },
   { path: '**',       redirectTo: 'dashboard' }
 ];
