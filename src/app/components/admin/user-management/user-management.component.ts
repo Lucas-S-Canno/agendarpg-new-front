@@ -15,6 +15,9 @@ import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { UserAdminService, PagedResponse, UserSearchParams } from '../../../services/admin/user-admin/user-admin.service';
 import { UserModel } from '../../../models/user';
 import { UserDetailsModalComponent } from './user-details-modal/user-details-modal.component';
+import { UserEditModalComponent } from './user-edit-modal/user-edit-modal.component';
+import { UserCreateModalComponent } from './user-create-modal/user-create-modal.component';
+import { ConfirmDeleteDialogComponent } from './confirm-delete-dialog/confirm-delete-dialog.component';
 
 @Component({
   selector: 'app-user-management',
@@ -44,7 +47,7 @@ export class UserManagementComponent implements OnInit {
   totalElements = 0;
   totalPages = 0;
   currentPage = 0;
-  pageSize = 3;
+  pageSize = 10;
 
   // Formulário de filtros
   filterForm!: FormGroup;
@@ -186,6 +189,41 @@ export class UserManagementComponent implements OnInit {
     return pages;
   }
 
+  createUser(): void {
+    const dialogRef = this.dialog.open(UserCreateModalComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      panelClass: 'user-create-dialog'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.saveNewUser(result);
+      }
+    });
+  }
+
+  saveNewUser(userData: Partial<UserModel>): void {
+    this.userAdminService.createUser(userData as UserModel).subscribe({
+      next: (response) => {
+        this.snackBar.open(
+          'Usuário criado com sucesso!',
+          'Fechar',
+          { duration: 3000, panelClass: ['snackbar-success'] }
+        );
+        this.loadUsers(this.currentPage);
+      },
+      error: (error) => {
+        console.error('Erro ao criar usuário:', error);
+        this.snackBar.open(
+          'Erro ao criar usuário. Tente novamente.',
+          'Fechar',
+          { duration: 3000, panelClass: ['snackbar-error'] }
+        );
+      }
+    });
+  }
+
   viewUserDetails(user: UserModel): void {
     this.dialog.open(UserDetailsModalComponent, {
       width: '700px',
@@ -196,10 +234,81 @@ export class UserManagementComponent implements OnInit {
   }
 
   editUser(user: UserModel): void {
-    console.log('Editar usuário:', user);
+    const dialogRef = this.dialog.open(UserEditModalComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      data: user,
+      panelClass: 'user-edit-dialog'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.updateUser(result);
+      }
+    });
+  }
+
+  updateUser(userData: UserModel): void {
+    this.userAdminService.updateUser(userData).subscribe({
+      next: (response) => {
+        this.snackBar.open(
+          'Usuário atualizado com sucesso!',
+          'Fechar',
+          { duration: 3000, panelClass: ['snackbar-success'] }
+        );
+        this.loadUsers(this.currentPage);
+      },
+      error: (error) => {
+        console.error('Erro ao atualizar usuário:', error);
+        this.snackBar.open(
+          'Erro ao atualizar usuário. Tente novamente.',
+          'Fechar',
+          { duration: 3000, panelClass: ['snackbar-error'] }
+        );
+      }
+    });
   }
 
   deleteUser(user: UserModel): void {
-    console.log('Deletar usuário:', user);
+    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
+      width: '400px',
+      data: { userName: user.nomeCompleto }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.confirmDeleteUser(user);
+      }
+    });
+  }
+
+  confirmDeleteUser(user: UserModel): void {
+    if (!user.id) {
+      this.snackBar.open(
+        'ID do usuário não encontrado.',
+        'Fechar',
+        { duration: 3000, panelClass: ['snackbar-error'] }
+      );
+      return;
+    }
+
+    this.userAdminService.deleteUser(user.id).subscribe({
+      next: () => {
+        this.snackBar.open(
+          'Usuário deletado com sucesso!',
+          'Fechar',
+          { duration: 3000, panelClass: ['snackbar-success'] }
+        );
+        this.loadUsers(this.currentPage);
+      },
+      error: (error) => {
+        console.error('Erro ao deletar usuário:', error);
+        this.snackBar.open(
+          'Erro ao deletar usuário. Tente novamente.',
+          'Fechar',
+          { duration: 3000, panelClass: ['snackbar-error'] }
+        );
+      }
+    });
   }
 }
