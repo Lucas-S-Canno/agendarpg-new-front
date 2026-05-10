@@ -1,127 +1,147 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
-import { EventModel } from '../../models/event';
-import { EventsByDate } from '../../models/eventsByDate';
-import { EventService } from '../../services/event/event.service';
-import { StateService } from '../../services/state/state.service';
-import { EventCardComponent } from '../../shared/event-card/event-card.component';
+import { Router } from '@angular/router';
+import { EventModelV2 } from '../../models/event.model';
 import { EventUpdateService } from '../../services/event/event-update.service';
+import { EventApiService } from '../../services/event/event-api.service';
+import { StateService } from '../../services/state/state.service';
 
 @Component({
   selector: 'app-my-events',
   standalone: true,
   imports: [
     CommonModule,
-    EventCardComponent,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTableModule,
+    MatPaginatorModule,
     MatProgressSpinnerModule,
-    MatExpansionModule
+    MatTooltipModule
   ],
   templateUrl: './my-events.component.html',
   styleUrl: './my-events.component.scss'
 })
-export class MyEventsComponent implements OnInit, OnDestroy {
-  loading: boolean = true;
-  events: EventModel[] = [];
-  eventsByDate: EventsByDate[] = [];
+export class MyEventsComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
+  loading = true;
+  readonly displayedColumns = ['nome', 'local', 'inicio', 'fim', 'acoes'];
+  readonly dataSource = new MatTableDataSource<EventModelV2>([]);
   private subscription: Subscription = new Subscription();
 
   constructor(
-    private eventService: EventService,
-    private stateService: StateService,
-    private eventUpdateService: EventUpdateService
+    private readonly eventApiService: EventApiService,
+    private readonly eventUpdateService: EventUpdateService,
+    private readonly stateService: StateService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
-    this.getMyEvents();
+    this.loadMyCreatedEvents();
 
-    // Escutar por atualizações de eventos
     this.subscription.add(
       this.eventUpdateService.eventUpdated$.subscribe(() => {
-        console.log('Eventos atualizados, recarregando...');
-        this.getMyEvents();
+        this.loadMyCreatedEvents();
       })
     );
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
   }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
   }
 
-  getMyEvents(): void {
+  loadMyCreatedEvents(): void {
     this.loading = true;
-    this.eventService.getMyEvents().subscribe({
+    this.eventApiService.getEvents().subscribe({
       next: (response) => {
-        this.events = response.data;
-        this.groupEventsByDate();
-      },
-      complete: () => {
-        setTimeout(() => {
-          this.loading = false;
-        }, 1000);
+        const events = this.filterEventsByCreator(response.data ?? []);
+        const sortedEvents = [...events].sort((a, b) => {
+          return new Date(b.inicio).getTime() - new Date(a.inicio).getTime();
+        });
+        this.dataSource.data = sortedEvents;
+        this.dataSource.paginator = this.paginator;
       },
       error: (error) => {
-        console.error('Error fetching my events:', error);
+        console.error('Erro ao carregar eventos criados:', error);
+      },
+      complete: () => {
         this.loading = false;
       }
     });
   }
 
-  groupEventsByDate(): void {
-    const grouped = this.events.reduce((acc, event) => {
-      const date = event.data;
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(event);
-      return acc;
-    }, {} as { [key: string]: EventModel[] });
-
-    this.eventsByDate = Object.keys(grouped)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
-      .map(date => ({
-        date,
-        displayDate: this.formatDateForDisplay(date),
-        events: grouped[date].sort((a, b) => a.horario.localeCompare(b.horario))
-      }));
-  }
-
-  formatDateForDisplay(dateString: string): string {
-    const date = new Date(dateString + 'T00:00:00');
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Normalizar datas para comparação (apenas dia/mês/ano)
-    const eventDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const tomorrowNormalized = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
-
-    if (eventDate.getTime() === todayNormalized.getTime()) {
-      return 'Hoje - ' + date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long'
-      });
-    } else if (eventDate.getTime() === tomorrowNormalized.getTime()) {
-      return 'Amanhã - ' + date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long'
-      });
-    } else {
-      return date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
+  private filterEventsByCreator(events: EventModelV2[]): EventModelV2[] {
+    const userId = this.stateService.userData?.id;
+    if (!userId) {
+      return [];
     }
+
+    return events.filter((event) => this.extractCreatorId(event) === userId);
   }
 
-  getEventCountText(count: number): string {
-    return count === 1 ? '1 evento' : `${count} eventos`;
+  private extractCreatorId(event: EventModelV2): number | null {
+    const eventAny = event as unknown as Record<string, unknown>;
+    const creatorKeys = [
+      'criadorId',
+      'createdById',
+      'usuarioCriadorId',
+      'coordenadorId',
+      'ownerId',
+      'userId'
+    ];
+
+    for (const key of creatorKeys) {
+      const value = eventAny[key];
+      if (typeof value === 'number') {
+        return value;
+      }
+    }
+
+    const nestedCreator = eventAny['createdBy'] as Record<string, unknown> | undefined;
+    if (nestedCreator && typeof nestedCreator['id'] === 'number') {
+      return nestedCreator['id'] as number;
+    }
+
+    const nestedCriador = eventAny['criador'] as Record<string, unknown> | undefined;
+    if (nestedCriador && typeof nestedCriador['id'] === 'number') {
+      return nestedCriador['id'] as number;
+    }
+
+    return null;
+  }
+
+  formatDateTime(dateTime: string): string {
+    return new Date(dateTime).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  editEvent(event: EventModelV2): void {
+    this.router.navigate(['/novo-evento'], {
+      queryParams: {
+        id: event.id,
+        nome: event.nome,
+        local: event.local,
+        inicio: event.inicio,
+        fim: event.fim
+      }
+    });
   }
 }

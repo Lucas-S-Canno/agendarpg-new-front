@@ -2,7 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule }      from '@angular/common';
 import { MatCardModule }     from '@angular/material/card';
 import { MatChipsModule }    from '@angular/material/chips';
-import { EventModel }        from '../../models/event';
+import { EventModelV2 } from '../../models/event.model';
 import { MatDialog } from '@angular/material/dialog';
 import { EventModalComponent } from '../event-modal/event-modal.component';
 
@@ -10,7 +10,6 @@ import { EventModalComponent } from '../event-modal/event-modal.component';
   selector: 'app-event-card',
   standalone: true,
   imports: [
-    EventModalComponent,
     CommonModule,
     MatCardModule,
     MatChipsModule
@@ -19,14 +18,26 @@ import { EventModalComponent } from '../event-modal/event-modal.component';
   styleUrl: './event-card.component.scss'
 })
 export class EventCardComponent {
-  @Input() event!: EventModel;
+  @Input() event!: EventModelV2;
 
   constructor(private dialog: MatDialog) {}
 
-  get vagasDisponiveis(): string {
-    const ocupadas = this.event.jogadores.length;
-    const total    = this.event.numeroDeVagas;
-    return `Vagas: ${ocupadas}/${total}`;
+  get periodo(): string {
+    const inicio = new Date(this.event.inicio).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const fim = new Date(this.event.fim).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return `${inicio} - ${fim}`;
   }
 
   openModal(): void {
