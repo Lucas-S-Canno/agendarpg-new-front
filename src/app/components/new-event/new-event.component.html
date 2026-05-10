@@ -6,141 +6,42 @@
 
     <mat-card-content>
       <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
-
-        <!-- Título -->
         <mat-form-field appearance="outline">
-          <mat-label>Título do Evento</mat-label>
-          <input matInput formControlName="titulo" placeholder="Digite o título">
-          <mat-error *ngIf="eventForm.get('titulo')?.hasError('required')">
-            Título é obrigatório
-          </mat-error>
-          <mat-error *ngIf="eventForm.get('titulo')?.hasError('minlength')">
-            Título deve ter pelo menos 3 caracteres
-          </mat-error>
+          <mat-label>Nome do Evento</mat-label>
+          <input matInput formControlName="nome" placeholder="Digite o nome do evento">
+          <mat-error *ngIf="eventForm.get('nome')?.hasError('required')">Nome é obrigatório</mat-error>
+          <mat-error *ngIf="eventForm.get('nome')?.hasError('minlength')">Nome deve ter pelo menos 3 caracteres</mat-error>
         </mat-form-field>
 
-        <!-- Sistema -->
         <mat-form-field appearance="outline">
-          <mat-label>Sistema de RPG</mat-label>
-          <input matInput formControlName="sistema" placeholder="Ex: D&D 5E, Pathfinder">
-          <mat-error *ngIf="eventForm.get('sistema')?.hasError('required')">
-            Sistema é obrigatório
-          </mat-error>
+          <mat-label>Local</mat-label>
+          <input matInput formControlName="local" placeholder="Local do evento">
+          <mat-error *ngIf="eventForm.get('local')?.hasError('required')">Local é obrigatório</mat-error>
+          <mat-error *ngIf="eventForm.get('local')?.hasError('minlength')">Local deve ter pelo menos 3 caracteres</mat-error>
         </mat-form-field>
 
-        <!-- Data e Horário -->
         <div class="date-time-row">
           <mat-form-field appearance="outline">
-            <mat-label>Data</mat-label>
-            <input
-              matInput
-              [matDatepicker]="picker"
-              formControlName="data"
-              placeholder="dd/mm/aaaa"
-              readonly>
-            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
-            <mat-error *ngIf="eventForm.get('data')?.hasError('required')">
-              Data é obrigatória
-            </mat-error>
+            <mat-label>Início</mat-label>
+            <input matInput type="datetime-local" formControlName="inicio" placeholder="Data e hora de início" title="Data e hora de início">
+            <mat-error *ngIf="eventForm.get('inicio')?.hasError('required')">Data/hora de início é obrigatória</mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Horário</mat-label>
-            <mat-select formControlName="horario">
-              <mat-option *ngFor="let time of timeOptions" [value]="time">
-                {{ time }}
-              </mat-option>
-            </mat-select>
-            <mat-error *ngIf="eventForm.get('horario')?.hasError('required')">
-              Horário é obrigatório
-            </mat-error>
+            <mat-label>Fim</mat-label>
+            <input matInput type="datetime-local" formControlName="fim" placeholder="Data e hora de fim" title="Data e hora de fim">
+            <mat-error *ngIf="eventForm.get('fim')?.hasError('required')">Data/hora de fim é obrigatória</mat-error>
           </mat-form-field>
         </div>
 
-        <!-- Vagas e Local -->
-        <div class="vagas-local-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Número de Vagas</mat-label>
-            <input matInput type="number" formControlName="numeroDeVagas" min="1" max="20" placeholder="Número de vagas">
-            <mat-error *ngIf="eventForm.get('numeroDeVagas')?.hasError('required')">
-              Número de vagas é obrigatório
-            </mat-error>
-            <mat-error *ngIf="eventForm.get('numeroDeVagas')?.hasError('min')">
-              Mínimo 1 vaga
-            </mat-error>
-            <mat-error *ngIf="eventForm.get('numeroDeVagas')?.hasError('max')">
-              Máximo 20 vagas
-            </mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Local</mat-label>
-            <input matInput formControlName="local" placeholder="Local do evento">
-            <mat-error *ngIf="eventForm.get('local')?.hasError('required')">
-              Local é obrigatório
-            </mat-error>
-          </mat-form-field>
+        <div class="date-range-error" *ngIf="eventForm.hasError('invalidDateRange') && (eventForm.get('fim')?.touched || eventForm.get('inicio')?.touched)">
+          A data/hora de fim deve ser maior que a data/hora de início.
         </div>
 
-        <!-- Tags -->
-        <mat-form-field appearance="outline" class="tags-field">
-          <mat-label>Tags</mat-label>
-          <mat-chip-grid #chipGrid>
-            <mat-chip-row *ngFor="let tag of selectedTags" (removed)="removeTag(tag)">
-              {{ tag }}
-              <button matChipRemove>
-                <mat-icon>cancel</mat-icon>
-              </button>
-            </mat-chip-row>
-          </mat-chip-grid>
-          <input
-            placeholder="Adicionar tags..."
-            #tagInput
-            formControlName="tagInput"
-            [matChipInputFor]="chipGrid"
-            [matAutocomplete]="auto"
-            [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-            (matChipInputTokenEnd)="addTag($event)">
-
-          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selectTag($event.option.value)">
-            <mat-option *ngFor="let tag of filteredTags | async" [value]="tag">
-              {{ tag }}
-            </mat-option>
-          </mat-autocomplete>
-        </mat-form-field>
-
-        <!-- Descrição -->
-        <mat-form-field appearance="outline" class="description-field">
-          <mat-label>Descrição</mat-label>
-          <textarea
-            matInput
-            formControlName="descricao"
-            rows="4"
-            placeholder="Descreva seu evento...">
-          </textarea>
-          <mat-error *ngIf="eventForm.get('descricao')?.hasError('required')">
-            Descrição é obrigatória
-          </mat-error>
-          <mat-error *ngIf="eventForm.get('descricao')?.hasError('minlength')">
-            Descrição deve ter pelo menos 10 caracteres
-          </mat-error>
-        </mat-form-field>
-
-        <!-- Botões -->
         <div class="form-actions">
-          <button mat-button type="button" (click)="onCancel()">
-            Cancelar
-          </button>
-          <button
-            mat-raised-button
-            color="primary"
-            type="submit"
-            [disabled]="eventForm.invalid || selectedTags.length === 0">
-            Criar Evento
-          </button>
+          <button mat-button type="button" (click)="onCancel()">Cancelar</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="eventForm.invalid">Criar Evento</button>
         </div>
-
       </form>
     </mat-card-content>
   </mat-card>

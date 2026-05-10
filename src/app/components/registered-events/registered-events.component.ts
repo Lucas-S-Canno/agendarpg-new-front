@@ -1,127 +1,85 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { EventModel } from '../../models/event';
-import { EventService } from '../../services/event/event.service';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { EventCardComponent } from '../../shared/event-card/event-card.component';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { StateService } from '../../services/state/state.service';
-import { EventsByDate } from '../../models/eventsByDate';
-import { EventUpdateService } from '../../services/event/event-update.service';
+import { MatCardModule } from '@angular/material/card';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
+import { ActivityModel } from '../../models/activity.model';
+import { EventUpdateService } from '../../services/event/event-update.service';
+import { UserActivityApiService } from '../../services/user/user-activity-api.service';
 
 @Component({
   selector: 'app-registered-events',
   standalone: true,
   imports: [
-        CommonModule,
-        EventCardComponent,
-        MatProgressSpinnerModule,
-        MatExpansionModule
-      ],
+    CommonModule,
+    MatCardModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './registered-events.component.html',
   styleUrl: './registered-events.component.scss'
 })
-export class RegisteredEventsComponent implements OnInit, OnDestroy {
-  loading: boolean = true;
-  events: EventModel[] = [];
-  eventsByDate: EventsByDate[] = [];
+export class RegisteredEventsComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
+  loading = true;
+  readonly displayedColumns = ['nome', 'tipo', 'inicio', 'fim', 'local'];
+  readonly dataSource = new MatTableDataSource<ActivityModel>([]);
   private subscription: Subscription = new Subscription();
 
   constructor(
-    private eventService: EventService,
-    private stateService: StateService,
-    private eventUpdateService: EventUpdateService
+    private readonly userActivityApiService: UserActivityApiService,
+    private readonly eventUpdateService: EventUpdateService
   ) {}
 
   ngOnInit(): void {
-    this.getMyEvents();
+    this.loadMyRegistrations();
 
-    // Escutar por atualizações de eventos
     this.subscription.add(
       this.eventUpdateService.eventUpdated$.subscribe(() => {
-        this.getMyEvents();
+        this.loadMyRegistrations();
       })
     );
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
   }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
   }
 
-  getMyEvents(): void {
+  loadMyRegistrations(): void {
     this.loading = true;
-    this.eventService.getRegisteredEvents().subscribe({
+    this.userActivityApiService.myRegistrations().subscribe({
       next: (response) => {
-        this.events = response.data;
-        this.groupEventsByDate();
-      },
-      complete: () => {
-        setTimeout(() => {
-          this.loading = false;
-        }, 1000);
+        const upcomingActivities = (response.data ?? [])
+          .filter((activity) => new Date(activity.inicio).getTime() >= Date.now())
+          .sort((a, b) => new Date(b.inicio).getTime() - new Date(a.inicio).getTime());
+
+        this.dataSource.data = upcomingActivities;
+        this.dataSource.paginator = this.paginator;
       },
       error: (error) => {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching registered activities:', error);
+      },
+      complete: () => {
         this.loading = false;
       }
     });
   }
 
-  groupEventsByDate(): void {
-    const grouped = this.events.reduce((acc, event) => {
-      const date = event.data;
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(event);
-      return acc;
-    }, {} as { [key: string]: EventModel[] });
-
-    this.eventsByDate = Object.keys(grouped)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
-      .map(date => ({
-        date,
-        displayDate: this.formatDateForDisplay(date),
-        events: grouped[date].sort((a, b) => a.horario.localeCompare(b.horario))
-      }));
+  formatDateTime(dateTime: string): string {
+    return new Date(dateTime).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
-
-  formatDateForDisplay(dateString: string): string {
-    const date = new Date(dateString + 'T00:00:00');
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Normalizar datas para comparação (apenas dia/mês/ano)
-    const eventDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const tomorrowNormalized = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
-
-    if (eventDate.getTime() === todayNormalized.getTime()) {
-      return 'Hoje - ' + date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long'
-      });
-    } else if (eventDate.getTime() === tomorrowNormalized.getTime()) {
-      return 'Amanhã - ' + date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long'
-      });
-    } else {
-      return date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
-    }
-  }
-
-  getEventCountText(count: number): string {
-    return count === 1 ? '1 evento' : `${count} eventos`;
-  }
-
 }

@@ -65,6 +65,33 @@
   }
 }
 
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activity-item {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+
+  p {
+    margin: 8px 0;
+  }
+
+  button {
+    margin-top: 8px;
+  }
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 @media (max-width: 599px) {
   .event-modal {
     max-width: 100vw;

@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.seusite.com/api'
+  apiUrl: 'https://api.seusite.com/api',
+  eventActivityV2Enabled: true
 };

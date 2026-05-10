@@ -60,6 +60,10 @@ export class NaviComponent {
     return this.isLoggedIn && allowedTypes.includes(this.userType);
   }
 
+  get canCreateActivities(): boolean {
+    return this.canCreateEvents;
+  }
+
   get isAdmin(): boolean {
     const adminTypes = ['CRD', 'ADM'];
     return this.isLoggedIn && adminTypes.includes(this.userType);
