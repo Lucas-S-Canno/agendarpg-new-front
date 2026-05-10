@@ -123,13 +123,21 @@
               <input
                 matInput
                 formControlName="tagsText"
-                placeholder="Buscar tags"
+                placeholder="Buscar tags disponíveis"
+                (focus)="onTagsInputFocus()"
                 [matAutocomplete]="tagsAuto">
               <mat-autocomplete #tagsAuto="matAutocomplete" (optionSelected)="addTag($event.option.value)">
+                <mat-option *ngIf="loadingTags" disabled>
+                  Carregando tags...
+                </mat-option>
                 <mat-option *ngFor="let tag of getFilteredTags()" [value]="tag">
                   {{ tag.nome }}
                 </mat-option>
+                <mat-option *ngIf="!loadingTags && getFilteredTags().length === 0" disabled>
+                  Nenhuma tag encontrada
+                </mat-option>
               </mat-autocomplete>
+              <mat-hint>Selecione uma ou mais tags da lista de sugestões.</mat-hint>
             </mat-form-field>
 
             <div class="full-row" *ngIf="selectedTags.length > 0">

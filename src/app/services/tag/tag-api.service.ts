@@ -31,8 +31,22 @@ export class TagApiService {
     }
 
     const envelope = response as ResponseModel<unknown>;
-    if (envelope && Array.isArray(envelope.data)) {
+    if (!envelope) {
+      return [];
+    }
+
+    if (Array.isArray(envelope.data)) {
       return this.mapTags(envelope.data);
+    }
+
+    const dataObject = envelope.data as Record<string, unknown> | undefined;
+    if (dataObject && Array.isArray(dataObject['content'])) {
+      return this.mapTags(dataObject['content'] as unknown[]);
+    }
+
+    const responseObject = response as Record<string, unknown>;
+    if (responseObject && Array.isArray(responseObject['content'])) {
+      return this.mapTags(responseObject['content'] as unknown[]);
     }
 
     return [];
@@ -44,14 +58,16 @@ export class TagApiService {
         const tag = item as Record<string, unknown>;
         const id = tag['id'];
         const nome = tag['nome'];
+        const tagName = tag['tag'];
+        const resolvedName = typeof nome === 'string' ? nome : tagName;
 
-        if (typeof id !== 'number' || typeof nome !== 'string') {
+        if (typeof id !== 'number' || typeof resolvedName !== 'string') {
           return null;
         }
 
         return {
           id,
-          nome,
+          nome: resolvedName,
           descricao: typeof tag['descricao'] === 'string' ? tag['descricao'] : null,
           cor: typeof tag['cor'] === 'string' ? tag['cor'] : null
         } as TagModel;

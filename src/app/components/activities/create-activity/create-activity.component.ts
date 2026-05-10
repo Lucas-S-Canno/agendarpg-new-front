@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatAutocompleteModule, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -47,6 +47,8 @@ import { TagApiService } from '../../../services/tag/tag-api.service';
   styleUrls: ['./create-activity.component.scss']
 })
 export class CreateActivityComponent implements OnInit {
+  @ViewChild(MatAutocompleteTrigger) tagsAutocompleteTrigger?: MatAutocompleteTrigger;
+
   loading = true;
   submitting = false;
   hasEligibleEvents = true;
@@ -54,6 +56,7 @@ export class CreateActivityComponent implements OnInit {
   events: EventModelV2[] = [];
   selectedEvent: EventModelV2 | null = null;
   availableTags: TagModel[] = [];
+  filteredTags: TagModel[] = [];
   selectedTags: TagModel[] = [];
   loadingTags = false;
 
@@ -76,6 +79,7 @@ export class CreateActivityComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    this.setupTagsFilter();
     this.loadEvents();
     this.loadTags();
   }
@@ -116,6 +120,7 @@ export class CreateActivityComponent implements OnInit {
     ).subscribe({
       next: (tags) => {
         this.availableTags = tags;
+        this.updateFilteredTags();
       },
       error: (error) => {
         console.error('Erro ao carregar tags:', error);
@@ -274,7 +279,7 @@ export class CreateActivityComponent implements OnInit {
     };
 
     if (value.tipo === ActivityType.RPG_MESA) {
-      const tags = this.selectedTags.map((tag) => tag.nome);
+      const tags = this.selectedTags.map((tag) => tag.nome.trim()).filter((name) => name.length > 0);
       const narratorId = this.stateService.userData?.id;
 
       if (!value.sistema || !value.numeroVagas || Number(value.numeroVagas) <= 0 || !narratorId || tags.length === 0) {
@@ -371,8 +376,23 @@ export class CreateActivityComponent implements OnInit {
   }
 
   getFilteredTags(): TagModel[] {
+    return this.filteredTags;
+  }
+
+  onTagsInputFocus(): void {
+    this.updateFilteredTags();
+    this.tagsAutocompleteTrigger?.openPanel();
+  }
+
+  private setupTagsFilter(): void {
+    this.activityForm.get('tagsText')?.valueChanges.subscribe(() => {
+      this.updateFilteredTags();
+    });
+  }
+
+  private updateFilteredTags(): void {
     const query = `${this.activityForm.get('tagsText')?.value || ''}`.trim().toLowerCase();
-    return this.availableTags.filter((tag) => {
+    this.filteredTags = this.availableTags.filter((tag) => {
       const matchesQuery = query.length === 0 || tag.nome.toLowerCase().includes(query);
       const notSelected = !this.selectedTags.some((selected) => selected.id === tag.id);
       return matchesQuery && notSelected;
@@ -380,17 +400,19 @@ export class CreateActivityComponent implements OnInit {
   }
 
   addTag(tag: TagModel): void {
-    const exists = this.selectedTags.some((item) => item.id === tag.id);
+    const exists = this.selectedTags.some((item) => item.nome.toLowerCase() === tag.nome.toLowerCase());
     if (exists) {
       return;
     }
 
     this.selectedTags = [...this.selectedTags, tag];
     this.activityForm.patchValue({ tagsText: '' });
+    this.updateFilteredTags();
   }
 
   removeTag(tag: TagModel): void {
     this.selectedTags = this.selectedTags.filter((item) => item.id !== tag.id);
+    this.updateFilteredTags();
   }
 
   private showSuccess(message: string): void {

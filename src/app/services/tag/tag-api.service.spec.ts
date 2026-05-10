@@ -46,6 +46,26 @@ describe('TagApiService', () => {
     });
   });
 
+  it('deve mapear campo tag quando nome nao estiver presente', () => {
+    service.getTags().subscribe((tags) => {
+      expect(tags.length).toBe(2);
+      expect(tags[0].nome).toBe('Dungeons & Dragons');
+      expect(tags[1].nome).toBe('Pathfinder');
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/tags');
+    expect(req.request.method).toBe('GET');
+
+    req.flush({
+      statusCode: 200,
+      statusMessage: 'OK',
+      data: [
+        { id: 1, tag: 'Dungeons & Dragons' },
+        { id: 2, tag: 'Pathfinder' }
+      ]
+    });
+  });
+
   it('deve buscar tags com resposta em array puro', () => {
     service.getTags().subscribe((tags) => {
       expect(tags.length).toBe(1);
