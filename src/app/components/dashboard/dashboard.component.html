@@ -6,26 +6,58 @@
       <mat-spinner diameter="50"></mat-spinner>
     </div>
   } @else {
-    @if (eventsByDate.length === 0) {
+    @if (events.length === 0) {
       <div class="no-events">
         <p>Nenhum evento encontrado.</p>
       </div>
     } @else {
       <mat-accordion class="events-accordion">
-        @for (dateGroup of eventsByDate; track dateGroup.date) {
+        @for (event of events; track event.id) {
           <mat-expansion-panel>
             <mat-expansion-panel-header>
               <mat-panel-title>
-                {{ dateGroup.displayDate }}
+                {{ event.nome }}
               </mat-panel-title>
               <mat-panel-description>
-                {{ getEventCountText(dateGroup.events.length) }}
+                {{ formatDateTime(event.inicio) }} • {{ event.local }}
+                @if (event.atividades && event.atividades.length > 0) {
+                  • {{ getActivityCountText(event.atividades.length) }}
+                }
               </mat-panel-description>
             </mat-expansion-panel-header>
 
-            <div class="events-grid">
-              @for (event of dateGroup.events; track event.id) {
-                <app-event-card [event]="event"></app-event-card>
+            <div class="event-details">
+              <div class="event-info">
+                <div class="info-item">
+                  <span class="info-label">Local:</span>
+                  <span class="info-value">{{ event.local }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Início:</span>
+                  <span class="info-value">{{ formatDateTime(event.inicio) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Término:</span>
+                  <span class="info-value">{{ formatDateTime(event.fim) }}</span>
+                </div>
+              </div>
+
+              @if (event.atividades && event.atividades.length > 0) {
+                <div class="activities-section">
+                  <h3>Atividades do Evento</h3>
+                  <div class="activities-list">
+                    @for (activity of event.atividades; track activity.id) {
+                      <app-activity-card
+                        [activity]="activity"
+                        (cardClicked)="onActivityClicked($event, event)"
+                      ></app-activity-card>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <div class="no-activities">
+                  <p>Nenhuma atividade registrada para este evento.</p>
+                </div>
               }
             </div>
           </mat-expansion-panel>

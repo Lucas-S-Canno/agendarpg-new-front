@@ -1,10 +1,12 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { EventModelV2 } from '../../models/event.model';
+import { ActivityModel } from '../../models/activity.model';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatExpansionModule } from '@angular/material/expansion';
-import { EventCardComponent } from '../../shared/event-card/event-card.component';
-import { EventsByDate } from '../../models/eventsByDate';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { ActivityCardComponent } from '../../shared/activity-card/activity-card.component';
+import { EventModalComponent } from '../../shared/event-modal/event-modal.component';
 import { EventUpdateService } from '../../services/event/event-update.service';
 import { Subscription } from 'rxjs';
 import { EventApiService } from '../../services/event/event-api.service';
@@ -14,9 +16,10 @@ import { EventApiService } from '../../services/event/event-api.service';
   standalone: true,
   imports: [
     CommonModule,
-    EventCardComponent,
+    ActivityCardComponent,
     MatProgressSpinnerModule,
-    MatExpansionModule
+    MatExpansionModule,
+    MatDialogModule
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
@@ -24,13 +27,13 @@ import { EventApiService } from '../../services/event/event-api.service';
 export class DashboardComponent implements OnInit, OnDestroy {
   loading: boolean = true;
   events: EventModelV2[] = [];
-  eventsByDate: EventsByDate[] = [];
   private eventUpdateSubscription: Subscription = new Subscription();
 
   constructor(
     @Inject(PLATFORM_ID) private readonly platformId: Object,
     private eventApiService: EventApiService,
-    private eventUpdateService: EventUpdateService
+    private eventUpdateService: EventUpdateService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -48,22 +51,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   subscribeToEventUpdates(): void {
-    this.eventUpdateSubscription = this.eventUpdateService.eventUpdated$.subscribe((eventId) => {
-      // console.log('Event updated, refreshing dashboard...', eventId ? `Event ID: ${eventId}` : 'All events');
+    this.eventUpdateSubscription = this.eventUpdateService.eventUpdated$.subscribe(() => {
       this.refreshEvents();
     });
   }
 
   refreshEvents(): void {
-    // Não mostrar loading durante refresh para melhor UX
     this.getAllEventsWithoutLoading();
   }
 
   getAllEventsWithoutLoading(): void {
     this.eventApiService.getEvents().subscribe({
       next: (response) => {
-        this.events = this.filterUpcomingEvents(response.data ?? []);
-        this.groupEventsByDate();
+        this.events = this.filterAndSortUpcomingEvents(response.data ?? []);
       },
       error: (error) => {
         console.error('Error fetching events:', error);
@@ -74,8 +74,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getAllEvents(): void {
     this.eventApiService.getEvents().subscribe({
       next: (response) => {
-        this.events = this.filterUpcomingEvents(response.data ?? []);
-        this.groupEventsByDate();
+        this.events = this.filterAndSortUpcomingEvents(response.data ?? []);
       },
       complete: () => {
         this.loading = false;
@@ -87,64 +86,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private filterUpcomingEvents(events: EventModelV2[]): EventModelV2[] {
-    const now = Date.now();
-    return events.filter((event) => new Date(event.inicio).getTime() >= now);
+  private filterAndSortUpcomingEvents(events: EventModelV2[]): EventModelV2[] {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    return events
+      .filter((event) => {
+        const eventDate = new Date(event.inicio);
+        return eventDate >= now;
+      })
+      .sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime());
   }
 
-  groupEventsByDate(): void {
-    const grouped = this.events.reduce((acc, event) => {
-      const date = event.inicio.split('T')[0];
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(event);
-      return acc;
-    }, {} as { [key: string]: EventModelV2[] });
-
-    this.eventsByDate = Object.keys(grouped)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
-      .map(date => ({
-        date,
-        displayDate: this.formatDateForDisplay(date),
-        events: grouped[date].sort((a, b) => a.inicio.localeCompare(b.inicio))
-      }));
+  onActivityClicked(activity: ActivityModel, event: EventModelV2): void {
+    this.dialog.open(EventModalComponent, {
+      data: event,
+      maxWidth: '90vw',
+      maxHeight: '90vh'
+    });
   }
 
-  formatDateForDisplay(dateString: string): string {
-    const date = new Date(dateString + 'T00:00:00');
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Normalizar datas para comparação (apenas dia/mês/ano)
-    const eventDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const tomorrowNormalized = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
-
-    if (eventDate.getTime() === todayNormalized.getTime()) {
-      return 'Hoje - ' + date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long'
-      });
-    } else if (eventDate.getTime() === tomorrowNormalized.getTime()) {
-      return 'Amanhã - ' + date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long'
-      });
-    } else {
-      return date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
-    }
+  getActivityCountText(count: number): string {
+    return count === 1 ? '1 atividade' : `${count} atividades`;
   }
 
-  getEventCountText(count: number): string {
-    return count === 1 ? '1 evento' : `${count} eventos`;
+  formatDateTime(dateTime: string): string {
+    return new Date(dateTime).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 }
