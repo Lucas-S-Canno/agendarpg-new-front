@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivityModel } from '../../models/activity.model';
 import { UserActivityApiService } from '../../services/user/user-activity-api.service';
 import { EventUpdateService } from '../../services/event/event-update.service';
+import { ActivityEditModalComponent } from './activity-edit-modal/activity-edit-modal.component';
 
 @Component({
   selector: 'app-my-activities-created',
@@ -21,6 +22,7 @@ import { EventUpdateService } from '../../services/event/event-update.service';
     CommonModule,
     MatCardModule,
     MatButtonModule,
+    MatDialogModule,
     MatIconModule,
     MatTableModule,
     MatPaginatorModule,
@@ -43,7 +45,7 @@ export class MyActivitiesCreatedComponent implements OnInit, OnDestroy, AfterVie
   constructor(
     private readonly userActivityApiService: UserActivityApiService,
     private readonly eventUpdateService: EventUpdateService,
-    private readonly router: Router,
+    private readonly dialog: MatDialog,
     private readonly snackBar: MatSnackBar
   ) {}
 
@@ -89,10 +91,16 @@ export class MyActivitiesCreatedComponent implements OnInit, OnDestroy, AfterVie
   }
 
   editActivity(activity: ActivityModel): void {
-    this.router.navigate(['/atividades'], {
-      queryParams: {
-        activityId: activity.id,
-        eventoId: activity.eventoId
+    const dialogRef = this.dialog.open(ActivityEditModalComponent, {
+      width: '760px',
+      maxWidth: '95vw',
+      data: activity,
+      panelClass: 'activity-edit-dialog'
+    });
+
+    dialogRef.afterClosed().subscribe((updated) => {
+      if (updated) {
+        this.loadMyCreatedActivities();
       }
     });
   }
