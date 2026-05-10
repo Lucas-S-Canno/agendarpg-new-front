@@ -1,14 +1,13 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { EventModel } from '../../models/event';
-import { EventService } from '../../services/event/event.service';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { EventModelV2 } from '../../models/event.model';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { EventCardComponent } from '../../shared/event-card/event-card.component';
-import { CommonModule } from '@angular/common';
-import { StateService } from '../../services/state/state.service';
 import { EventsByDate } from '../../models/eventsByDate';
 import { EventUpdateService } from '../../services/event/event-update.service';
 import { Subscription } from 'rxjs';
+import { EventApiService } from '../../services/event/event-api.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -24,17 +23,22 @@ import { Subscription } from 'rxjs';
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   loading: boolean = true;
-  events: EventModel[] = [];
+  events: EventModelV2[] = [];
   eventsByDate: EventsByDate[] = [];
   private eventUpdateSubscription: Subscription = new Subscription();
 
   constructor(
-    private eventService: EventService,
-    private stateService: StateService,
+    @Inject(PLATFORM_ID) private readonly platformId: Object,
+    private eventApiService: EventApiService,
     private eventUpdateService: EventUpdateService
   ) {}
 
   ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.loading = false;
+      return;
+    }
+
     this.getAllEvents();
     this.subscribeToEventUpdates();
   }
@@ -56,9 +60,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getAllEventsWithoutLoading(): void {
-    this.eventService.getAllEvents().subscribe({
+    this.eventApiService.getEvents().subscribe({
       next: (response) => {
-        this.events = response.data;
+        this.events = this.filterUpcomingEvents(response.data ?? []);
         this.groupEventsByDate();
       },
       error: (error) => {
@@ -68,9 +72,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getAllEvents(): void {
-    this.eventService.getAllEvents().subscribe({
+    this.eventApiService.getEvents().subscribe({
       next: (response) => {
-        this.events = response.data;
+        this.events = this.filterUpcomingEvents(response.data ?? []);
         this.groupEventsByDate();
       },
       complete: () => {
@@ -83,22 +87,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private filterUpcomingEvents(events: EventModelV2[]): EventModelV2[] {
+    const now = Date.now();
+    return events.filter((event) => new Date(event.inicio).getTime() >= now);
+  }
+
   groupEventsByDate(): void {
     const grouped = this.events.reduce((acc, event) => {
-      const date = event.data;
+      const date = event.inicio.split('T')[0];
       if (!acc[date]) {
         acc[date] = [];
       }
       acc[date].push(event);
       return acc;
-    }, {} as { [key: string]: EventModel[] });
+    }, {} as { [key: string]: EventModelV2[] });
 
     this.eventsByDate = Object.keys(grouped)
       .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
       .map(date => ({
         date,
         displayDate: this.formatDateForDisplay(date),
-        events: grouped[date].sort((a, b) => a.horario.localeCompare(b.horario))
+        events: grouped[date].sort((a, b) => a.inicio.localeCompare(b.inicio))
       }));
   }
 

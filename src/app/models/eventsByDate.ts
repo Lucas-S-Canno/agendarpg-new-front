@@ -1,8 +1,8 @@
-import { EventModel } from "./event";
+import { EventModelV2 } from './event.model';
 
 export interface EventsByDate {
   date: string;
   displayDate: string;
-  events: EventModel[];
+  events: EventModelV2[];
   expanded?: boolean;
 }

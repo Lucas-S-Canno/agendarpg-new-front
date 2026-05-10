@@ -6,31 +6,50 @@
       <mat-spinner diameter="50"></mat-spinner>
     </div>
   } @else {
-    @if (eventsByDate.length === 0) {
+    @if (dataSource.data.length === 0) {
       <div class="no-events">
-        <p>Nenhum evento encontrado.</p>
+        <p>Nenhum evento criado encontrado para seu usuário.</p>
       </div>
     } @else {
-      <mat-accordion class="events-accordion">
-        @for (dateGroup of eventsByDate; track dateGroup.date) {
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title>
-                {{ dateGroup.displayDate }}
-              </mat-panel-title>
-              <mat-panel-description>
-                {{ getEventCountText(dateGroup.events.length) }}
-              </mat-panel-description>
-            </mat-expansion-panel-header>
+      <mat-card class="table-card">
+        <div class="table-wrapper">
+          <table mat-table [dataSource]="dataSource" class="events-table">
+            <ng-container matColumnDef="nome">
+              <th mat-header-cell *matHeaderCellDef>Nome</th>
+              <td mat-cell *matCellDef="let event">{{ event.nome }}</td>
+            </ng-container>
 
-            <div class="events-grid">
-              @for (event of dateGroup.events; track event.id) {
-                <app-event-card [event]="event"></app-event-card>
-              }
-            </div>
-          </mat-expansion-panel>
-        }
-      </mat-accordion>
+            <ng-container matColumnDef="local">
+              <th mat-header-cell *matHeaderCellDef>Local</th>
+              <td mat-cell *matCellDef="let event">{{ event.local }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="inicio">
+              <th mat-header-cell *matHeaderCellDef>Início</th>
+              <td mat-cell *matCellDef="let event">{{ formatDateTime(event.inicio) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="fim">
+              <th mat-header-cell *matHeaderCellDef>Fim</th>
+              <td mat-cell *matCellDef="let event">{{ formatDateTime(event.fim) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="acoes">
+              <th mat-header-cell *matHeaderCellDef>Ações</th>
+              <td mat-cell *matCellDef="let event">
+                <button mat-icon-button color="primary" (click)="editEvent(event)" matTooltip="Alterar evento">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        </div>
+
+        <mat-paginator [pageSize]="10" [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+      </mat-card>
     }
   }
 </div>

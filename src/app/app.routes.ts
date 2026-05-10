@@ -4,11 +4,14 @@ import { RouterModule, Routes } from '@angular/router';
 import { LoginComponent }     from './components/login/login.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { NewEventComponent } from './components/new-event/new-event.component';
+import { CreateActivityComponent } from './components/activities/create-activity/create-activity.component';
+import { MyActivitiesCreatedComponent } from './components/my-activities-created/my-activities-created.component';
 import { MyEventsComponent } from './components/my-events/my-events.component';
 import { RegisteredEventsComponent } from './components/registered-events/registered-events.component';
 import { RegisterNewUserComponent } from './components/register-new-user/register-new-user.component';
 import { UserProfileComponent } from './components/user-profile/user-profile.component';
 import { AuthGuard } from './guards/auth.guard';
+import { ActivityCreationGuard } from './guards/activity-creation.guard';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { EmailConfirmationComponent } from './components/email-confirmation/email-confirmation.component';
 import { EmailVerificationComponent } from './components/email-verification/email-verification.component';
@@ -28,12 +31,17 @@ export const routes: Routes = [
   {
     path: 'novo-evento',
     component: NewEventComponent,
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard, AdminGuard]
   },
   {
     path: 'meus-eventos',
     component: MyEventsComponent,
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard, ActivityCreationGuard]
+  },
+  {
+    path: 'minhas-atividades-criadas',
+    component: MyActivitiesCreatedComponent,
+    canActivate: [AuthGuard, ActivityCreationGuard]
   },
   {
     path: 'eventos-registrados',
@@ -54,6 +62,11 @@ export const routes: Routes = [
     path: 'admin/eventos',
     component: EventManagementComponent,
     canActivate: [AuthGuard, AdminGuard]
+  },
+  {
+    path: 'atividades',
+    component: CreateActivityComponent,
+    canActivate: [AuthGuard, ActivityCreationGuard]
   },
   {
     path: 'admin/tags',

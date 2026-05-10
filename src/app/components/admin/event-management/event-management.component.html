@@ -3,26 +3,174 @@
     <mat-card-header>
       <mat-card-title>
         <mat-icon>event</mat-icon>
-        Gestão de Eventos
+        Gestao de Eventos e Atividades
       </mat-card-title>
     </mat-card-header>
 
     <mat-card-content>
       <div *ngIf="loading" class="loading-container">
         <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
-        <p>Carregando dados dos eventos...</p>
+        <p>Carregando dados...</p>
       </div>
 
-      <div *ngIf="!loading" class="content">
-        <p>Página de gestão de eventos em desenvolvimento.</p>
-        <p>Aqui você poderá:</p>
-        <ul>
-          <li>Visualizar todos os eventos do sistema</li>
-          <li>Aprovar ou reprovar eventos criados por narradores</li>
-          <li>Editar informações de eventos</li>
-          <li>Cancelar eventos</li>
-          <li>Visualizar estatísticas de eventos</li>
-        </ul>
+      <div *ngIf="!loading && !hasManagementPermission" class="no-permission">
+        Seu perfil nao possui permissao para esta area.
+      </div>
+
+      <div *ngIf="!loading && hasManagementPermission" class="content-grid">
+        <section class="panel" *ngIf="canManageEvents">
+          <h3>Eventos</h3>
+
+          <form [formGroup]="eventForm" (ngSubmit)="submitEvent()" class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Nome</mat-label>
+              <input matInput formControlName="nome" placeholder="Nome do evento">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Local</mat-label>
+              <input matInput formControlName="local" placeholder="Local do evento">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Inicio</mat-label>
+              <input matInput type="datetime-local" formControlName="inicio" placeholder="Inicio" title="Inicio">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fim</mat-label>
+              <input matInput type="datetime-local" formControlName="fim" placeholder="Fim" title="Fim">
+            </mat-form-field>
+
+            <div class="actions">
+              <button mat-raised-button color="primary" type="submit">
+                {{ eventForm.get('id')?.value ? 'Atualizar Evento' : 'Criar Evento' }}
+              </button>
+              <button mat-button type="button" (click)="resetEventForm()">Limpar</button>
+            </div>
+          </form>
+
+          <div class="list" *ngIf="events.length > 0; else noEvents">
+            <article class="item" *ngFor="let event of events">
+              <div>
+                <strong>{{ event.nome }}</strong>
+                <p>{{ event.local }} | {{ event.inicio | date:'dd/MM/yyyy HH:mm' }} - {{ event.fim | date:'dd/MM/yyyy HH:mm' }}</p>
+              </div>
+              <div class="item-actions">
+                <button mat-button color="primary" (click)="selectEvent(event.id || null)">Selecionar</button>
+                <button mat-button color="accent" (click)="editEvent(event)">Editar</button>
+                <button mat-button color="warn" (click)="deleteEvent(event.id)">Excluir</button>
+              </div>
+            </article>
+          </div>
+          <ng-template #noEvents>
+            <p class="empty">Nenhum evento encontrado.</p>
+          </ng-template>
+        </section>
+
+        <section class="panel" *ngIf="canManageActivities">
+          <h3>Atividades</h3>
+
+          <mat-form-field appearance="outline" class="event-selector">
+            <mat-label>Evento</mat-label>
+            <mat-select [value]="selectedEventId" (selectionChange)="selectEvent($event.value)">
+              <mat-option [value]="null">Selecione</mat-option>
+              <mat-option *ngFor="let event of events" [value]="event.id">{{ event.nome }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <form [formGroup]="activityForm" (ngSubmit)="submitActivity()" class="form-grid" *ngIf="selectedEventId">
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo</mat-label>
+              <mat-select formControlName="tipo">
+                <mat-option *ngFor="let type of activityTypes" [value]="type">{{ type }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nome</mat-label>
+              <input matInput formControlName="nome" placeholder="Nome da atividade">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-row">
+              <mat-label>Descricao</mat-label>
+              <textarea matInput formControlName="descricao" rows="3" placeholder="Descricao"></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Inicio</mat-label>
+              <input matInput type="datetime-local" formControlName="inicio" placeholder="Inicio" title="Inicio da atividade">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fim</mat-label>
+              <input matInput type="datetime-local" formControlName="fim" placeholder="Fim" title="Fim da atividade">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-row">
+              <mat-label>Local complementar</mat-label>
+              <input matInput formControlName="localComplemento" placeholder="Sala, auditorio...">
+            </mat-form-field>
+
+            <ng-container *ngIf="isRpgActivity">
+              <mat-form-field appearance="outline">
+                <mat-label>Sistema</mat-label>
+                <input matInput formControlName="sistema" placeholder="D&D 5e">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Numero de vagas</mat-label>
+                <input matInput type="number" formControlName="numeroVagas" placeholder="6">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>ID do narrador</mat-label>
+                <input matInput type="number" formControlName="narradorId" placeholder="1">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-row">
+                <mat-label>Tags (separadas por virgula)</mat-label>
+                <input matInput formControlName="tagsText" placeholder="fantasia, aventura">
+              </mat-form-field>
+            </ng-container>
+
+            <ng-container *ngIf="isWorkshopActivity">
+              <mat-form-field appearance="outline" class="full-row">
+                <mat-label>Tema</mat-label>
+                <input matInput formControlName="tema" placeholder="Tema do workshop">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>ID do palestrante</mat-label>
+                <input matInput type="number" formControlName="palestranteId" placeholder="2">
+              </mat-form-field>
+            </ng-container>
+
+            <div class="actions full-row">
+              <button mat-raised-button color="primary" type="submit">
+                {{ activityForm.get('id')?.value ? 'Atualizar Atividade' : 'Criar Atividade' }}
+              </button>
+              <button mat-button type="button" (click)="resetActivityForm()">Limpar</button>
+            </div>
+          </form>
+
+          <p class="empty" *ngIf="!selectedEventId">Selecione um evento para gerir atividades.</p>
+
+          <div class="list" *ngIf="selectedEventId && activities.length > 0">
+            <article class="item" *ngFor="let activity of activities">
+              <div>
+                <strong>{{ activity.nome }}</strong>
+                <p>{{ activity.tipo }} | {{ activity.inicio | date:'dd/MM/yyyy HH:mm' }} - {{ activity.fim | date:'dd/MM/yyyy HH:mm' }}</p>
+              </div>
+              <div class="item-actions">
+                <button mat-button color="accent" (click)="editActivity(activity)">Editar</button>
+                <button mat-button color="warn" (click)="deleteActivity(activity.id)">Excluir</button>
+              </div>
+            </article>
+          </div>
+
+          <p class="empty" *ngIf="selectedEventId && activities.length === 0">Nenhuma atividade encontrada para o evento selecionado.</p>
+        </section>
       </div>
     </mat-card-content>
   </mat-card>
