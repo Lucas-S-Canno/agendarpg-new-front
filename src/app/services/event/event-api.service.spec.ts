@@ -64,4 +64,31 @@ describe('EventApiService', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
     req.flush({ statusCode: 201, data: {} });
   });
+
+  it('deve buscar eventos criados com token', () => {
+    service.myCreatedEvents().subscribe((response) => {
+      expect(response.statusCode).toBe(200);
+      expect(response.data.length).toBe(1);
+      expect(response.data[0].nome).toBe('Evento Criado');
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/events/my-created');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
+    req.flush({
+      statusCode: 200,
+      statusMessage: 'OK',
+      data: [
+        {
+          id: 5,
+          nome: 'Evento Criado',
+          local: 'Biblioteca',
+          inicio: '2026-05-17T15:00:00',
+          fim: '2026-05-17T18:00:00',
+          creatorUserId: 1,
+          atividades: []
+        }
+      ]
+    });
+  });
 });

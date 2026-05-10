@@ -1,0 +1,68 @@
+<div class="event-edit-modal">
+  <div class="modal-header">
+    <h2 mat-dialog-title>
+      <mat-icon>edit</mat-icon>
+      Editar Evento
+    </h2>
+    <button mat-icon-button type="button" (click)="cancel()" aria-label="Fechar modal">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="modal-content">
+    <form [formGroup]="editForm" class="edit-form">
+      <div class="form-grid">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nome do evento</mat-label>
+          <input matInput formControlName="nome" placeholder="Digite o nome do evento">
+          @if (editForm.get('nome')?.hasError('required')) {
+            <mat-error>Nome e obrigatorio</mat-error>
+          }
+          @if (editForm.get('nome')?.hasError('minlength')) {
+            <mat-error>Nome deve ter no minimo 3 caracteres</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Local</mat-label>
+          <input matInput formControlName="local" placeholder="Digite o local do evento">
+          @if (editForm.get('local')?.hasError('required')) {
+            <mat-error>Local e obrigatorio</mat-error>
+          }
+          @if (editForm.get('local')?.hasError('minlength')) {
+            <mat-error>Local deve ter no minimo 3 caracteres</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Inicio</mat-label>
+          <input matInput type="datetime-local" formControlName="inicio">
+          @if (editForm.get('inicio')?.hasError('required')) {
+            <mat-error>Data de inicio e obrigatoria</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Fim</mat-label>
+          <input matInput type="datetime-local" formControlName="fim">
+          @if (editForm.get('fim')?.hasError('required')) {
+            <mat-error>Data de fim e obrigatoria</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (editForm.hasError('invalidDateRange')) {
+        <p class="date-error">A data de fim deve ser maior que a data de inicio.</p>
+      }
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="modal-actions" align="end">
+    <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving">
+      Cancelar
+    </button>
+    <button mat-raised-button color="primary" type="button" (click)="save()" [disabled]="editForm.invalid || saving">
+      Salvar
+    </button>
+  </mat-dialog-actions>
+</div>

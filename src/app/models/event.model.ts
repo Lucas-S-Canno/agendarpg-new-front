@@ -6,6 +6,7 @@ export interface EventModelV2 {
   local: string;
   inicio: string;
   fim: string;
+  creatorUserId?: number;
   atividades?: ActivityModel[];
 }
 

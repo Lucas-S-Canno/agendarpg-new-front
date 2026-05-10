@@ -43,8 +43,8 @@ export class EventApiService {
     });
   }
 
-  myCreations(): Observable<ResponseModel<EventModelV2[]>> {
-    return this.http.get<ResponseModel<EventModelV2[]>>(`${environment.apiUrl}/user-app/events/my-creations`, {
+  myCreatedEvents(): Observable<ResponseModel<EventModelV2[]>> {
+    return this.http.get<ResponseModel<EventModelV2[]>>(`${this.API_URL}/my-created`, {
       headers: this.getAuthHeaders()
     });
   }

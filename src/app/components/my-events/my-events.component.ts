@@ -3,16 +3,17 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription } from 'rxjs';
-import { Router } from '@angular/router';
+import { finalize, Subscription } from 'rxjs';
 import { EventModelV2 } from '../../models/event.model';
 import { EventUpdateService } from '../../services/event/event-update.service';
 import { EventApiService } from '../../services/event/event-api.service';
-import { StateService } from '../../services/state/state.service';
+import { EventEditModalComponent } from './event-edit-modal/event-edit-modal.component';
 
 @Component({
   selector: 'app-my-events',
@@ -22,10 +23,12 @@ import { StateService } from '../../services/state/state.service';
     MatCardModule,
     MatButtonModule,
     MatIconModule,
+    MatDialogModule,
     MatTableModule,
     MatPaginatorModule,
     MatProgressSpinnerModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSnackBarModule
   ],
   templateUrl: './my-events.component.html',
   styleUrl: './my-events.component.scss'
@@ -41,8 +44,8 @@ export class MyEventsComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private readonly eventApiService: EventApiService,
     private readonly eventUpdateService: EventUpdateService,
-    private readonly stateService: StateService,
-    private readonly router: Router
+    private readonly dialog: MatDialog,
+    private readonly snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -65,62 +68,26 @@ export class MyEventsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   loadMyCreatedEvents(): void {
     this.loading = true;
-    this.eventApiService.getEvents().subscribe({
+    this.eventApiService.myCreatedEvents().pipe(
+      finalize(() => {
+        this.loading = false;
+      })
+    ).subscribe({
       next: (response) => {
-        const events = this.filterEventsByCreator(response.data ?? []);
-        const sortedEvents = [...events].sort((a, b) => {
+        const sortedEvents = [...(response.data ?? [])].sort((a, b) => {
           return new Date(b.inicio).getTime() - new Date(a.inicio).getTime();
         });
         this.dataSource.data = sortedEvents;
         this.dataSource.paginator = this.paginator;
+        this.paginator?.firstPage();
       },
-      error: (error) => {
-        console.error('Erro ao carregar eventos criados:', error);
-      },
-      complete: () => {
-        this.loading = false;
+      error: () => {
+        this.dataSource.data = [];
+        this.snackBar.open('Nao foi possivel carregar seus eventos criados.', 'Fechar', {
+          duration: 3500
+        });
       }
     });
-  }
-
-  private filterEventsByCreator(events: EventModelV2[]): EventModelV2[] {
-    const userId = this.stateService.userData?.id;
-    if (!userId) {
-      return [];
-    }
-
-    return events.filter((event) => this.extractCreatorId(event) === userId);
-  }
-
-  private extractCreatorId(event: EventModelV2): number | null {
-    const eventAny = event as unknown as Record<string, unknown>;
-    const creatorKeys = [
-      'criadorId',
-      'createdById',
-      'usuarioCriadorId',
-      'coordenadorId',
-      'ownerId',
-      'userId'
-    ];
-
-    for (const key of creatorKeys) {
-      const value = eventAny[key];
-      if (typeof value === 'number') {
-        return value;
-      }
-    }
-
-    const nestedCreator = eventAny['createdBy'] as Record<string, unknown> | undefined;
-    if (nestedCreator && typeof nestedCreator['id'] === 'number') {
-      return nestedCreator['id'] as number;
-    }
-
-    const nestedCriador = eventAny['criador'] as Record<string, unknown> | undefined;
-    if (nestedCriador && typeof nestedCriador['id'] === 'number') {
-      return nestedCriador['id'] as number;
-    }
-
-    return null;
   }
 
   formatDateTime(dateTime: string): string {
@@ -134,14 +101,11 @@ export class MyEventsComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   editEvent(event: EventModelV2): void {
-    this.router.navigate(['/novo-evento'], {
-      queryParams: {
-        id: event.id,
-        nome: event.nome,
-        local: event.local,
-        inicio: event.inicio,
-        fim: event.fim
-      }
+    this.dialog.open(EventEditModalComponent, {
+      width: '720px',
+      maxWidth: '95vw',
+      data: event,
+      panelClass: 'event-edit-dialog'
     });
   }
 }
