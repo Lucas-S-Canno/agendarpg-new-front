@@ -1,20 +1,33 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { finalize, Subscription } from 'rxjs';
+import { MatAutocompleteModule, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivityModel, CreateActivityPayload } from '../../../models/activity.model';
 import { ActivityType } from '../../../models/activity-type.enum';
 import { EventModelV2 } from '../../../models/event.model';
+import { TagModel } from '../../../models/tag.model';
 import { ActivityApiService } from '../../../services/event/activity-api.service';
 import { EventApiService } from '../../../services/event/event-api.service';
 import { StateService } from '../../../services/state/state.service';
+import { TagApiService } from '../../../services/tag/tag-api.service';
+import { EventFormModalComponent, EventFormModalResult } from './event-form-modal/event-form-modal.component';
 
 @Component({
   selector: 'app-event-management',
@@ -29,35 +42,76 @@ import { StateService } from '../../../services/state/state.service';
     MatInputModule,
     MatSelectModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatTooltipModule,
+    MatExpansionModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatAutocompleteModule,
+    MatChipsModule
   ],
   templateUrl: './event-management.component.html',
   styleUrls: ['./event-management.component.scss']
 })
-export class EventManagementComponent implements OnInit {
+export class EventManagementComponent implements OnInit, OnDestroy {
+  @ViewChild(MatAutocompleteTrigger) tagsAutocompleteTrigger?: MatAutocompleteTrigger;
+
+  @ViewChild('eventsPaginator') set eventsPaginator(paginator: MatPaginator | undefined) {
+    this.eventsDataSource.paginator = paginator ?? null;
+  }
+
+  @ViewChild('activitiesPaginator') set activitiesPaginator(paginator: MatPaginator | undefined) {
+    this.activitiesDataSource.paginator = paginator ?? null;
+  }
+
   loading = true;
+  submittingEvent = false;
+  submittingActivity = false;
 
   events: EventModelV2[] = [];
   activities: ActivityModel[] = [];
   selectedEventId: number | null = null;
+  showActivityForm = false;
 
   readonly activityTypes = [ActivityType.RPG_MESA, ActivityType.WORKSHOP];
   readonly activityType = ActivityType;
+  readonly availableHours = this.buildAvailableHours();
+  readonly eventsColumns = ['nome', 'local', 'periodo', 'acoes'];
+  readonly activitiesColumns = ['nome', 'tipo', 'periodo', 'acoes'];
+  readonly pageSizeOptions = [5, 10, 25];
 
-  eventForm!: FormGroup;
+  eventsDataSource = new MatTableDataSource<EventModelV2>([]);
+  activitiesDataSource = new MatTableDataSource<ActivityModel>([]);
+
+  availableTags: TagModel[] = [];
+  filteredTags: TagModel[] = [];
+  selectedTags: TagModel[] = [];
+  loadingTags = false;
+
   activityForm!: FormGroup;
+
+  private readonly subscriptions = new Subscription();
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly eventApiService: EventApiService,
     private readonly activityApiService: ActivityApiService,
+    private readonly tagApiService: TagApiService,
     private readonly stateService: StateService,
-    private readonly snackBar: MatSnackBar
+    private readonly snackBar: MatSnackBar,
+    private readonly dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
     this.initForms();
     this.loadEvents();
+    this.loadTags();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
   }
 
   get userRole(): string {
@@ -84,58 +138,105 @@ export class EventManagementComponent implements OnInit {
     return this.activityForm.get('tipo')?.value === ActivityType.WORKSHOP;
   }
 
+  get selectedEventName(): string {
+    return this.events.find((event) => event.id === this.selectedEventId)?.nome ?? '';
+  }
+
   initForms(): void {
-    this.eventForm = this.fb.group({
-      id: [null],
-      nome: ['', [Validators.required, Validators.minLength(3)]],
-      local: ['', [Validators.required, Validators.minLength(3)]],
-      inicio: ['', Validators.required],
-      fim: ['', Validators.required]
+    this.activityForm = this.fb.group(
+      {
+        id: [null],
+        tipo: [ActivityType.RPG_MESA, Validators.required],
+        nome: ['', [Validators.required, Validators.minLength(3)]],
+        descricao: ['', [Validators.required, Validators.minLength(5)]],
+        inicioData: [null, Validators.required],
+        inicioHora: [null, Validators.required],
+        fimData: [null, Validators.required],
+        fimHora: [null, Validators.required],
+        localComplemento: ['', [Validators.required, Validators.minLength(2)]],
+        sistema: [''],
+        numeroVagas: [null],
+        tagsText: [''],
+        narradorId: [null],
+        tema: [''],
+        palestranteId: [null]
+      },
+      { validators: [this.dateRangeValidator('inicioData', 'inicioHora', 'fimData', 'fimHora')] }
+    );
+
+    const tagsSubscription = this.activityForm.get('tagsText')?.valueChanges.subscribe(() => {
+      this.updateFilteredTags();
     });
 
-    this.activityForm = this.fb.group({
-      id: [null],
-      tipo: [ActivityType.RPG_MESA, Validators.required],
-      nome: ['', [Validators.required, Validators.minLength(3)]],
-      descricao: ['', [Validators.required, Validators.minLength(5)]],
-      inicio: ['', Validators.required],
-      fim: ['', Validators.required],
-      localComplemento: ['', [Validators.required, Validators.minLength(2)]],
-      sistema: [''],
-      numeroVagas: [null],
-      tagsText: [''],
-      narradorId: [null],
-      tema: [''],
-      palestranteId: [null]
+    if (tagsSubscription) {
+      this.subscriptions.add(tagsSubscription);
+    }
+  }
+
+  loadEvents(autoSelectFirst = true): void {
+    this.loading = true;
+
+    this.eventApiService.getEvents().pipe(
+      finalize(() => {
+        this.loading = false;
+      })
+    ).subscribe({
+      next: (response) => {
+        this.events = response.data ?? [];
+        this.eventsDataSource.data = this.events;
+
+        if (!this.events.length) {
+          this.selectedEventId = null;
+          this.activities = [];
+          this.activitiesDataSource.data = [];
+          return;
+        }
+
+        const selectedStillExists = this.selectedEventId !== null && this.events.some((event) => event.id === this.selectedEventId);
+        if (selectedStillExists) {
+          return;
+        }
+
+        if (autoSelectFirst) {
+          this.selectEvent(this.events[0].id || null);
+          return;
+        }
+
+        this.selectedEventId = null;
+        this.activities = [];
+        this.activitiesDataSource.data = [];
+      },
+      error: () => {
+        this.showError('Erro ao carregar eventos.');
+      }
     });
   }
 
-  loadEvents(): void {
-    this.loading = true;
+  loadTags(): void {
+    this.loadingTags = true;
 
-    this.eventApiService.getEvents().subscribe({
-      next: (response) => {
-        this.events = response.data ?? [];
-
-        if (this.events.length > 0 && !this.selectedEventId) {
-          this.selectEvent(this.events[0].id || null);
-        }
+    this.tagApiService.getTags().pipe(
+      finalize(() => {
+        this.loadingTags = false;
+      })
+    ).subscribe({
+      next: (tags) => {
+        this.availableTags = tags;
+        this.updateFilteredTags();
       },
-      error: (error) => {
-        console.error('Erro ao carregar eventos:', error);
-        this.showError('Erro ao carregar eventos.');
-      },
-      complete: () => {
-        this.loading = false;
+      error: () => {
+        this.showError('Não foi possível carregar as tags.');
       }
     });
   }
 
   selectEvent(eventId: number | null): void {
     this.selectedEventId = eventId;
+    this.activities = [];
+    this.activitiesDataSource.data = [];
+    this.showActivityForm = false;
 
     if (!eventId) {
-      this.activities = [];
       return;
     }
 
@@ -146,76 +247,125 @@ export class EventManagementComponent implements OnInit {
     this.activityApiService.getByEvent(eventId).subscribe({
       next: (response) => {
         this.activities = response.data ?? [];
+        this.activitiesDataSource.data = this.activities;
       },
-      error: (error) => {
-        console.error('Erro ao carregar atividades:', error);
+      error: () => {
         this.showError('Erro ao carregar atividades do evento.');
       }
     });
   }
 
-  submitEvent(): void {
-    if (!this.canManageEvents) {
-      this.showError('Sem permissao para gerir eventos.');
-      return;
-    }
+  openEventForm(event?: EventModelV2): void {
+    const dialogRef = this.dialog.open(EventFormModalComponent, {
+      width: '760px',
+      maxWidth: '95vw',
+      data: { event: event ?? null }
+    });
 
-    if (this.eventForm.invalid) {
-      this.eventForm.markAllAsTouched();
-      return;
-    }
+    const dialogSubscription = dialogRef.afterClosed().subscribe((result: EventFormModalResult | null | undefined) => {
+      if (!result) {
+        return;
+      }
 
-    const value = this.eventForm.value;
-    const inicio = this.toApiDateTime(value.inicio);
-    const fim = this.toApiDateTime(value.fim);
+      this.saveEvent(result);
+    });
 
-    if (!this.isEndAfterStart(inicio, fim)) {
-      this.showError('A data/hora de fim deve ser maior que a de inicio.');
-      return;
-    }
+    this.subscriptions.add(dialogSubscription);
+  }
 
+  private saveEvent(formValue: EventFormModalResult): void {
     const payload = {
-      nome: value.nome,
-      local: value.local,
-      inicio,
-      fim
+      nome: formValue.nome,
+      local: formValue.local,
+      inicio: formValue.inicio,
+      fim: formValue.fim
     };
 
-    if (value.id) {
-      this.eventApiService.updateEvent(value.id, payload).subscribe({
-        next: () => {
-          this.showSuccess('Evento atualizado com sucesso.');
-          this.resetEventForm();
-          this.loadEvents();
-        },
-        error: (error) => {
-          console.error('Erro ao atualizar evento:', error);
-          this.showError('Erro ao atualizar evento.');
-        }
-      });
-      return;
-    }
+    this.submittingEvent = true;
+    const request$ = formValue.id
+      ? this.eventApiService.updateEvent(formValue.id, payload)
+      : this.eventApiService.createEvent(payload);
 
-    this.eventApiService.createEvent(payload).subscribe({
+    request$.pipe(
+      finalize(() => {
+        this.submittingEvent = false;
+      })
+    ).subscribe({
       next: () => {
-        this.showSuccess('Evento criado com sucesso.');
-        this.resetEventForm();
-        this.loadEvents();
+        this.showSuccess(formValue.id ? 'Evento atualizado com sucesso.' : 'Evento criado com sucesso.');
+        this.loadEvents(true);
       },
-      error: (error) => {
-        console.error('Erro ao criar evento:', error);
-        this.showError('Erro ao criar evento.');
+      error: () => {
+        this.showError(formValue.id ? 'Erro ao atualizar evento.' : 'Erro ao criar evento.');
       }
     });
   }
 
-  editEvent(event: EventModelV2): void {
-    this.eventForm.patchValue({
-      id: event.id || null,
-      nome: event.nome,
-      local: event.local,
-      inicio: this.toInputDateTime(event.inicio),
-      fim: this.toInputDateTime(event.fim)
+  openActivityForm(activity?: ActivityModel): void {
+    if (!this.selectedEventId) {
+      return;
+    }
+
+    if (activity) {
+      const { date: inicioData, hour: inicioHora } = this.parseDateTimeValue(activity.inicio);
+      const { date: fimData, hour: fimHora } = this.parseDateTimeValue(activity.fim);
+      this.selectedTags = this.availableTags.filter((tag) => ((activity.tags ?? []) as string[]).includes(tag.nome));
+
+      this.activityForm.patchValue({
+        id: activity.id,
+        tipo: activity.tipo,
+        nome: activity.nome,
+        descricao: activity.descricao,
+        inicioData,
+        inicioHora,
+        fimData,
+        fimHora,
+        localComplemento: activity.localComplemento,
+        sistema: activity.sistema ?? '',
+        numeroVagas: activity.numeroVagas ?? null,
+        narradorId: activity.narradorId ?? null,
+        tema: activity.tema ?? '',
+        palestranteId: activity.palestranteId ?? null,
+        tagsText: ''
+      });
+    } else {
+      this.resetActivityForm();
+    }
+
+    this.showActivityForm = true;
+  }
+
+  submitActivity(): void {
+    if (!this.canManageActivities || !this.selectedEventId || this.activityForm.invalid) {
+      this.activityForm.markAllAsTouched();
+      return;
+    }
+
+    const payload = this.buildActivityPayload();
+    if (!payload) {
+      return;
+    }
+
+    this.submittingActivity = true;
+    const value = this.activityForm.value;
+    const request$ = value.id
+      ? this.activityApiService.update(value.id, payload)
+      : this.activityApiService.create(this.selectedEventId, payload);
+
+    request$.pipe(
+      finalize(() => {
+        this.submittingActivity = false;
+      })
+    ).subscribe({
+      next: () => {
+        this.showSuccess(value.id ? 'Atividade atualizada com sucesso.' : 'Atividade criada com sucesso.');
+        this.showActivityForm = false;
+        this.resetActivityForm();
+        this.loadActivities(this.selectedEventId as number);
+      },
+      error: () => {
+        this.showError(value.id ? 'Erro ao atualizar atividade.' : 'Erro ao criar atividade.');
+      }
     });
   }
 
@@ -227,107 +377,17 @@ export class EventManagementComponent implements OnInit {
     this.eventApiService.deleteEvent(eventId).subscribe({
       next: () => {
         this.showSuccess('Evento removido com sucesso.');
-        this.loadEvents();
         if (this.selectedEventId === eventId) {
           this.selectedEventId = null;
           this.activities = [];
+          this.activitiesDataSource.data = [];
         }
+
+        this.loadEvents(false);
       },
-      error: (error) => {
-        console.error('Erro ao remover evento:', error);
+      error: () => {
         this.showError('Erro ao remover evento.');
       }
-    });
-  }
-
-  resetEventForm(): void {
-    this.eventForm.reset({
-      id: null,
-      nome: '',
-      local: '',
-      inicio: '',
-      fim: ''
-    });
-  }
-
-  submitActivity(): void {
-    if (!this.canManageActivities) {
-      this.showError('Sem permissao para gerir atividades.');
-      return;
-    }
-
-    if (!this.selectedEventId) {
-      this.showError('Selecione um evento para gerir atividades.');
-      return;
-    }
-
-    if (this.activityForm.invalid) {
-      this.activityForm.markAllAsTouched();
-      return;
-    }
-
-    const value = this.activityForm.value;
-    const inicio = this.toApiDateTime(value.inicio);
-    const fim = this.toApiDateTime(value.fim);
-
-    if (!this.isEndAfterStart(inicio, fim)) {
-      this.showError('A data/hora de fim da atividade deve ser maior que a de inicio.');
-      return;
-    }
-
-    if (!this.isInsideEventWindow(inicio, fim, this.selectedEventId)) {
-      this.showError('A atividade deve estar dentro da janela do evento.');
-      return;
-    }
-
-    const payload = this.buildActivityPayload();
-    if (!payload) {
-      return;
-    }
-
-    if (value.id) {
-      this.activityApiService.update(value.id, payload).subscribe({
-        next: () => {
-          this.showSuccess('Atividade atualizada com sucesso.');
-          this.resetActivityForm();
-          this.loadActivities(this.selectedEventId as number);
-        },
-        error: (error) => {
-          console.error('Erro ao atualizar atividade:', error);
-          this.showError('Erro ao atualizar atividade.');
-        }
-      });
-      return;
-    }
-
-    this.activityApiService.create(this.selectedEventId, payload).subscribe({
-      next: () => {
-        this.showSuccess('Atividade criada com sucesso.');
-        this.resetActivityForm();
-        this.loadActivities(this.selectedEventId as number);
-      },
-      error: (error) => {
-        console.error('Erro ao criar atividade:', error);
-        this.showError('Erro ao criar atividade.');
-      }
-    });
-  }
-
-  editActivity(activity: ActivityModel): void {
-    this.activityForm.patchValue({
-      id: activity.id || null,
-      tipo: activity.tipo,
-      nome: activity.nome,
-      descricao: activity.descricao,
-      inicio: this.toInputDateTime(activity.inicio),
-      fim: this.toInputDateTime(activity.fim),
-      localComplemento: activity.localComplemento,
-      sistema: activity.sistema || '',
-      numeroVagas: activity.numeroVagas || null,
-      tagsText: (activity.tags || []).join(', '),
-      narradorId: activity.narradorId || null,
-      tema: activity.tema || '',
-      palestranteId: activity.palestranteId || null
     });
   }
 
@@ -341,21 +401,47 @@ export class EventManagementComponent implements OnInit {
         this.showSuccess('Atividade removida com sucesso.');
         this.loadActivities(this.selectedEventId as number);
       },
-      error: (error) => {
-        console.error('Erro ao remover atividade:', error);
+      error: () => {
         this.showError('Erro ao remover atividade.');
       }
     });
   }
 
+  getFilteredTags(): TagModel[] {
+    return this.filteredTags;
+  }
+
+  addTag(tag: TagModel): void {
+    if (this.selectedTags.some((selectedTag) => selectedTag.id === tag.id)) {
+      return;
+    }
+
+    this.selectedTags = [...this.selectedTags, tag];
+    this.activityForm.patchValue({ tagsText: '' });
+    this.updateFilteredTags();
+  }
+
+  removeTag(tag: TagModel): void {
+    this.selectedTags = this.selectedTags.filter((selectedTag) => selectedTag.id !== tag.id);
+    this.updateFilteredTags();
+  }
+
+  onTagsInputFocus(): void {
+    this.updateFilteredTags();
+    this.tagsAutocompleteTrigger?.openPanel();
+  }
+
   resetActivityForm(): void {
+    this.selectedTags = [];
     this.activityForm.reset({
       id: null,
       tipo: ActivityType.RPG_MESA,
       nome: '',
       descricao: '',
-      inicio: '',
-      fim: '',
+      inicioData: null,
+      inicioHora: null,
+      fimData: null,
+      fimHora: null,
       localComplemento: '',
       sistema: '',
       numeroVagas: null,
@@ -364,27 +450,42 @@ export class EventManagementComponent implements OnInit {
       tema: '',
       palestranteId: null
     });
+    this.updateFilteredTags();
+  }
+
+  private updateFilteredTags(): void {
+    const query = `${this.activityForm.get('tagsText')?.value || ''}`.trim().toLowerCase();
+    this.filteredTags = this.availableTags.filter((tag) => {
+      const matchesQuery = query.length === 0 || tag.nome.toLowerCase().includes(query);
+      const notSelected = !this.selectedTags.some((selectedTag) => selectedTag.id === tag.id);
+      return matchesQuery && notSelected;
+    });
   }
 
   private buildActivityPayload(): CreateActivityPayload | null {
     const value = this.activityForm.value;
+    const inicio = this.combineDateAndTime(value.inicioData, value.inicioHora);
+    const fim = this.combineDateAndTime(value.fimData, value.fimHora);
+
+    if (!inicio || !fim) {
+      this.showError('Informe data e hora válidas para início e fim da atividade.');
+      return null;
+    }
+
     const payload: CreateActivityPayload = {
       tipo: value.tipo,
       nome: value.nome,
       descricao: value.descricao,
-      inicio: this.toApiDateTime(value.inicio),
-      fim: this.toApiDateTime(value.fim),
+      inicio,
+      fim,
       localComplemento: value.localComplemento
     };
 
     if (value.tipo === ActivityType.RPG_MESA) {
-      const tags = `${value.tagsText || ''}`
-        .split(',')
-        .map((tag: string) => tag.trim())
-        .filter((tag: string) => tag.length > 0);
+      const tags = this.selectedTags.map((tag) => tag.nome.trim()).filter((nome) => nome.length > 0);
 
       if (!value.sistema || !value.numeroVagas || value.numeroVagas <= 0 || !value.narradorId || tags.length === 0) {
-        this.showError('Para RPG_MESA informe sistema, vagas, narrador e tags.');
+        this.showError('Para RPG_MESA informe sistema, vagas, ID do narrador e tags.');
         return null;
       }
 
@@ -396,7 +497,7 @@ export class EventManagementComponent implements OnInit {
 
     if (value.tipo === ActivityType.WORKSHOP) {
       if (!value.tema || !value.palestranteId) {
-        this.showError('Para WORKSHOP informe tema e palestrante.');
+        this.showError('Para WORKSHOP informe tema e ID do palestrante.');
         return null;
       }
 
@@ -407,36 +508,65 @@ export class EventManagementComponent implements OnInit {
     return payload;
   }
 
-  private isInsideEventWindow(inicio: string, fim: string, eventId: number): boolean {
-    const event = this.events.find(item => item.id === eventId);
-    if (!event) {
-      return false;
+  private dateRangeValidator(dField: string, hField: string, dFimField: string, hFimField: string): ValidatorFn {
+    return (group): ValidationErrors | null => {
+      const inicioData = group.get(dField)?.value;
+      const inicioHora = group.get(hField)?.value;
+      const fimData = group.get(dFimField)?.value;
+      const fimHora = group.get(hFimField)?.value;
+
+      if (!inicioData || !inicioHora || !fimData || !fimHora) {
+        return null;
+      }
+
+      const inicio = this.combineDateAndTime(inicioData, inicioHora);
+      const fim = this.combineDateAndTime(fimData, fimHora);
+
+      if (!inicio || !fim) {
+        return null;
+      }
+
+      return new Date(fim).getTime() > new Date(inicio).getTime() ? null : { invalidDateRange: true };
+    };
+  }
+
+  private buildAvailableHours(): string[] {
+    const hours: string[] = [];
+    for (let hour = 0; hour < 24; hour += 1) {
+      for (const minute of [0, 30]) {
+        const hh = `${hour}`.padStart(2, '0');
+        const mm = `${minute}`.padStart(2, '0');
+        hours.push(`${hh}:${mm}`);
+      }
+    }
+    return hours;
+  }
+
+  private combineDateAndTime(dateValue: Date, hourValue: string): string | null {
+    if (!dateValue || !hourValue) {
+      return null;
     }
 
-    const eventStart = new Date(event.inicio).getTime();
-    const eventEnd = new Date(event.fim).getTime();
-    const activityStart = new Date(inicio).getTime();
-    const activityEnd = new Date(fim).getTime();
+    const date = new Date(dateValue);
+    const [hour, minute] = `${hourValue}`.split(':').map((part) => Number(part));
+    if (Number.isNaN(hour) || Number.isNaN(minute)) {
+      return null;
+    }
 
-    return activityStart >= eventStart && activityEnd <= eventEnd;
-  }
-
-  private isEndAfterStart(inicio: string, fim: string): boolean {
-    return new Date(fim).getTime() > new Date(inicio).getTime();
-  }
-
-  private toInputDateTime(value: string): string {
-    const date = new Date(value);
-    const pad = (n: number): string => `${n}`.padStart(2, '0');
-
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  }
-
-  private toApiDateTime(value: string): string {
-    const date = new Date(value);
-    const pad = (n: number): string => `${n}`.padStart(2, '0');
+    date.setHours(hour, minute, 0, 0);
+    const pad = (value: number): string => `${value}`.padStart(2, '0');
 
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+  }
+
+  private parseDateTimeValue(value: string): { date: Date; hour: string } {
+    const date = new Date(value);
+    const pad = (valueToPad: number): string => `${valueToPad}`.padStart(2, '0');
+
+    return {
+      date,
+      hour: `${pad(date.getHours())}:${pad(date.getMinutes())}`
+    };
   }
 
   private showSuccess(message: string): void {
