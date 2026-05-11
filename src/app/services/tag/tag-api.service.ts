@@ -6,6 +6,11 @@ import { ResponseModel } from '../../models/response';
 import { TagModel } from '../../models/tag.model';
 import { StateService } from '../state/state.service';
 
+export interface TagUpsertPayload {
+  id?: number;
+  tag: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -23,6 +28,24 @@ export class TagApiService {
     }).pipe(
       map((response) => this.normalizeTagsResponse(response))
     );
+  }
+
+  createTag(payload: TagUpsertPayload): Observable<unknown> {
+    return this.http.post<unknown>(this.API_URL, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  updateTag(payload: TagUpsertPayload): Observable<unknown> {
+    return this.http.put<unknown>(this.API_URL, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  deleteTag(tagId: number): Observable<unknown> {
+    return this.http.delete<unknown>(`${this.API_URL}/${tagId}`, {
+      headers: this.getAuthHeaders()
+    });
   }
 
   private normalizeTagsResponse(response: unknown): TagModel[] {

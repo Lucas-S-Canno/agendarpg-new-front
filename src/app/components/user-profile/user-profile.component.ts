@@ -107,7 +107,7 @@ export class UserProfileComponent implements OnInit {
             apelido: response.data.apelido,
             email: response.data.email,
             telefone: PhoneMask.applyMask(response.data.telefone || ''),
-            dataDeNascimento: response.data.dataDeNascimento,
+            dataDeNascimento: this.formatBirthDateForDisplay(response.data.dataDeNascimento),
             tipo: response.data.tipo,
             menor: response.data.menor,
             password: response.data.password || '',
@@ -128,7 +128,7 @@ export class UserProfileComponent implements OnInit {
             apelido: userData.apelido,
             email: userData.email,
             telefone: PhoneMask.applyMask(userData.telefone || ''),
-            dataDeNascimento: userData.dataDeNascimento,
+            dataDeNascimento: this.formatBirthDateForDisplay(userData.dataDeNascimento),
             tipo: userData.tipo,
             menor: userData.menor,
             password: userData.password || '',
@@ -170,7 +170,7 @@ export class UserProfileComponent implements OnInit {
         password: formData.password,
         nomeCompleto: formData.nomeCompleto,
         apelido: formData.apelido,
-        dataDeNascimento: formData.dataDeNascimento,
+        dataDeNascimento: this.formatBirthDateForRequest(formData.dataDeNascimento),
         tipo: formData.tipo,
         telefone: PhoneMask.formatForBackend(formData.telefone || ''),
         menor: formData.menor,
@@ -229,9 +229,46 @@ export class UserProfileComponent implements OnInit {
         apelido: formData.apelido,
         email: formData.email,
         telefone: formData.telefone,
-        dataDeNascimento: formData.dataDeNascimento
+        dataDeNascimento: this.formatBirthDateForRequest(formData.dataDeNascimento)
       };
     }
+  }
+
+  private formatBirthDateForDisplay(value: string | null | undefined): string {
+    if (!value) {
+      return '';
+    }
+
+    if (value.includes('/')) {
+      return value;
+    }
+
+    const [datePart] = value.split('T');
+    const parts = datePart.split('-');
+    if (parts.length !== 3) {
+      return value;
+    }
+
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  }
+
+  private formatBirthDateForRequest(value: string | null | undefined): string {
+    if (!value) {
+      return '';
+    }
+
+    if (value.includes('-')) {
+      return value.split('T')[0];
+    }
+
+    const parts = value.split('/');
+    if (parts.length !== 3) {
+      return value;
+    }
+
+    const [day, month, year] = parts;
+    return `${year}-${month}-${day}`;
   }
 
   goBack(): void {

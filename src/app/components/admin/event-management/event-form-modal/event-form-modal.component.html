@@ -35,7 +35,14 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Data de início</mat-label>
-        <input matInput [matDatepicker]="inicioPicker" formControlName="inicioData" title="Data de início">
+        <input
+          matInput
+          [matDatepicker]="inicioPicker"
+          formControlName="inicioData"
+          placeholder="dd/mm/aaaa"
+          title="Data de início"
+          (click)="inicioPicker.open()"
+          (focus)="inicioPicker.open()">
         <mat-datepicker-toggle matSuffix [for]="inicioPicker"></mat-datepicker-toggle>
         <mat-datepicker #inicioPicker></mat-datepicker>
         @if (eventForm.get('inicioData')?.hasError('required')) {
@@ -58,7 +65,14 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Data de fim</mat-label>
-        <input matInput [matDatepicker]="fimPicker" formControlName="fimData" title="Data de fim">
+        <input
+          matInput
+          [matDatepicker]="fimPicker"
+          formControlName="fimData"
+          placeholder="dd/mm/aaaa"
+          title="Data de fim"
+          (click)="fimPicker.open()"
+          (focus)="fimPicker.open()">
         <mat-datepicker-toggle matSuffix [for]="fimPicker"></mat-datepicker-toggle>
         <mat-datepicker #fimPicker></mat-datepicker>
         @if (eventForm.get('fimData')?.hasError('required')) {

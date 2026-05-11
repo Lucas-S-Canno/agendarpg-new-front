@@ -35,18 +35,48 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Inicio</mat-label>
-          <input matInput type="datetime-local" formControlName="inicio">
-          @if (editForm.get('inicio')?.hasError('required')) {
+          <mat-label>Data de inicio</mat-label>
+          <input matInput [matDatepicker]="inicioPicker" formControlName="inicioData" placeholder="dd/mm/aaaa" title="Data de inicio">
+          <mat-datepicker-toggle matSuffix [for]="inicioPicker"></mat-datepicker-toggle>
+          <mat-datepicker #inicioPicker></mat-datepicker>
+          @if (editForm.get('inicioData')?.hasError('required')) {
             <mat-error>Data de inicio e obrigatoria</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Fim</mat-label>
-          <input matInput type="datetime-local" formControlName="fim">
-          @if (editForm.get('fim')?.hasError('required')) {
+          <mat-label>Horario de inicio</mat-label>
+          <mat-select formControlName="inicioHora">
+            <mat-option [value]="null">Selecione um horario</mat-option>
+            @for (hour of availableHours; track hour) {
+              <mat-option [value]="hour">{{ hour }}</mat-option>
+            }
+          </mat-select>
+          @if (editForm.get('inicioHora')?.hasError('required')) {
+            <mat-error>Horario de inicio e obrigatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Data de fim</mat-label>
+          <input matInput [matDatepicker]="fimPicker" formControlName="fimData" placeholder="dd/mm/aaaa" title="Data de fim">
+          <mat-datepicker-toggle matSuffix [for]="fimPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fimPicker></mat-datepicker>
+          @if (editForm.get('fimData')?.hasError('required')) {
             <mat-error>Data de fim e obrigatoria</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Horario de fim</mat-label>
+          <mat-select formControlName="fimHora">
+            <mat-option [value]="null">Selecione um horario</mat-option>
+            @for (hour of availableHours; track hour) {
+              <mat-option [value]="hour">{{ hour }}</mat-option>
+            }
+          </mat-select>
+          @if (editForm.get('fimHora')?.hasError('required')) {
+            <mat-error>Horario de fim e obrigatorio</mat-error>
           }
         </mat-form-field>
       </div>
