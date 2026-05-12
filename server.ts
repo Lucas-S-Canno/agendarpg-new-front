@@ -2,7 +2,6 @@ import './src/instrumentation';
 import { APP_BASE_HREF } from '@angular/common';
 import { CommonEngine } from '@angular/ssr';
 import { Hono } from 'hono';
-import { serveStatic } from 'hono/bun';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, normalize, resolve } from 'node:path';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -18,11 +17,23 @@ interface ServerPaths {
  * Resolves the Angular server and browser distribution paths from this bundle.
  */
 function resolveServerPaths(): ServerPaths {
-  const serverDistFolder = dirname(fileURLToPath(import.meta.url));
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+
+  // Se estivermos na Vercel ou rodando da raiz, precisamos apontar para a pasta dist
+  // Se estivermos rodando de dentro da dist, o '../browser' padrão funciona.
+  const isRunningFromDist = currentDir.includes(join('dist', 'agendarpd-new-front', 'server'));
+
+  const browserDistFolder = isRunningFromDist
+    ? resolve(currentDir, '../browser')
+    : resolve(currentDir, 'dist/agendarpd-new-front/browser');
+
+  const indexHtml = isRunningFromDist
+    ? join(currentDir, 'index.server.html')
+    : join(currentDir, 'dist/agendarpd-new-front/server/index.server.html');
 
   return {
-    browserDistFolder: resolve(serverDistFolder, '../browser'),
-    indexHtml: join(serverDistFolder, 'index.server.html'),
+    browserDistFolder,
+    indexHtml,
   };
 }
 
@@ -78,7 +89,6 @@ async function sendBrowserAsset(
 export function app(): Hono {
   const server = new Hono();
   const { browserDistFolder, indexHtml } = resolveServerPaths();
-
   const commonEngine = new CommonEngine();
 
   // Logger middleware - "Percepção" para ver as requisições
@@ -87,32 +97,40 @@ export function app(): Hono {
     await next();
   });
 
-  // Serve static files from /browser - Only for paths with extensions
-  server.get('*.*', serveStatic({ 
-    root: browserDistFolder,
-  }));
-
-  // All regular routes use the Angular engine
+  // All routes are handled by this middleware
   server.get('*', async (c) => {
+    const requestUrl = c.req.url;
+    const url = new URL(requestUrl);
+
     try {
+      // 1. Check if it's a static asset (correção de path traversal incluída)
+      if (isStaticAssetPath(url.pathname)) {
+        const filePath = resolveBrowserAssetPath(browserDistFolder, url.pathname);
+
+        if (!filePath) return c.text('Not Found', 404);
+
+        const file = Bun.file(filePath);
+        if (!(await file.exists())) return c.text('Not Found', 404);
+
+        return c.body(await file.arrayBuffer(), 200, {
+          'content-type': file.type || 'application/octet-stream',
+        });
+      }
+
+      // 2. Render Angular SSR
       const html = await commonEngine.render({
         bootstrap,
         documentFilePath: indexHtml,
-        url: c.req.url,
+        url: requestUrl,
         publicPath: browserDistFolder,
         providers: [{ provide: APP_BASE_HREF, useValue: '/' }],
       });
-      
+
       return c.html(html);
     } catch (err) {
-      logger.error('SSR Rendering Error', { error: err, url: c.req.url });
+      logger.error('Hono SSR/Asset Error', { error: err, url: requestUrl });
       return c.text('Internal Server Error', 500);
     }
-  });
-
-  // Fallback handler to ensure a Response is always returned
-  server.notFound((c) => {
-    return c.text('Not Found', 404);
   });
 
   return server;
@@ -170,4 +188,9 @@ async function handleNodeRequest(
   }
 }
 
-run();
+// Only run the standalone server if this file is the main entry point.
+// "Porque dele, e por meio dele, e para ele são todas as coisas." — Romanos 11:36
+if (import.meta.main) {
+  run();
+}
+
