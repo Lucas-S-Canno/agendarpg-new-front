@@ -27,10 +27,15 @@ const sdk = new NodeSDK({
   logRecordProcessor: new SimpleLogRecordProcessor(new OTLPLogExporter()),
   instrumentations: [
     getNodeAutoInstrumentations({
-      // Captures HTTP, Express, and many common Node.js libraries
+      // Captures HTTP, Hono (via fetch/http), and many common Node.js libraries
       '@opentelemetry/instrumentation-fs': { enabled: true },
+      '@opentelemetry/instrumentation-winston': { 
+        enabled: true,
+        // This ensures trace context (traceId, spanId) is injected into Winston logs
+      },
     }),
   ],
+
 });
 
 try {
