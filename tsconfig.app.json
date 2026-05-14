@@ -4,8 +4,10 @@
   "compilerOptions": {
     "outDir": "./out-tsc/app",
     "types": [
-      "node"
+      "node",
+      "bun"
     ]
+
   },
   "files": [
     "src/main.ts",
